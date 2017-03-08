@@ -1,0 +1,130 @@
+#!/usr/bin/python3
+# Simple HTTP web server that forwards prometheus alerts over XMPP.
+#
+# To use, configure a web hook in alertmanager. E.g.:
+#
+# receivers:
+# - name: 'jelmer-pager'
+#   webhook_configs:
+#   - url: 'http://192.168.2.1:9199/alert'
+#
+# Then start this script, after editing the config dict:
+# $ python3 prometheus_xmpp.py
+
+import sys
+import json
+import os
+import nbxmpp
+import logging
+try:
+    from gi.repository import GObject as gobject
+except ImportError:
+    import gobject
+
+from wsgiref.simple_server import WSGIServer, make_server
+
+consoleloghandler = logging.StreamHandler()
+root_log = logging.getLogger('nbxmpp')
+#root_log.setLevel('DEBUG')
+root_log.addHandler(consoleloghandler)
+
+
+def create_message(message):
+    for i, alert in enumerate(message['alerts']):
+        yield '%s, %d/%d, %s, %s' % (
+            message['status'].upper(), i + 1, len(message['alerts']),
+            alert['startsAt'], alert['annotations']['summary'])
+
+
+class XmppApp(object):
+
+    def __init__(self, jid, password, to_jid, hostname=None):
+        self.jid = nbxmpp.protocol.JID(jid)
+        self.to_jid = to_jid
+        self.hostname = hostname
+        self.password = password
+        self.sm = nbxmpp.Smacks(self)
+        self.client_cert = None
+
+    def __call__(self, environ, start_response):
+        if environ['PATH_INFO'] == '/test':
+            text = 'Test message.'
+        elif environ['PATH_INFO'] == '/alert':
+            try:
+                content_length = int(environ['CONTENT_LENGTH'])
+            except KeyError:
+                alert = json.load(environ['wsgi.input'])
+            else:
+                alert = json.loads(environ['wsgi.input'].read(
+                    content_length).decode('utf-8'))
+            text = '\n'.join(create_message(alert))
+        else:
+            start_response('404 Not Found', [])
+            return [b'Please access /test or /alert']
+        id_ = self.client.send(nbxmpp.protocol.Message(
+            self.to_jid, text, typ='chat'))
+        start_response('200 OK', [])
+        return [('Sent message with id ' + id_).encode('utf-8')]
+
+    def on_auth(self, con, auth):
+        if not auth:
+            print('could not authenticate!')
+            sys.exit()
+        print('authenticated using ' + auth)
+
+    def on_connected(self, con, con_type):
+        print('connected with ' + con_type)
+        auth = self.client.auth(self.jid.getNode(), self.password,
+            resource=self.jid.getResource(), sasl=1, on_auth=self.on_auth)
+
+    def get_password(self, cb, mech):
+        cb(self.password)
+
+    def on_connection_failed(self):
+        print('could not connect!')
+        sys.exit(1)
+
+    def _event_dispatcher(self, realm, event, data):
+        pass
+
+    def connect(self):
+        idle_queue = nbxmpp.idlequeue.get_idlequeue()
+        self.client = nbxmpp.NonBlockingClient(
+            self.jid.getDomain(), idle_queue, caller=self)
+        self.con = self.client.connect(self.on_connected,
+            self.on_connection_failed, hostname=self.hostname,
+            secure_tuple=('tls', '', '', None, None))
+
+    def quit(self):
+        self.disconnect()
+        ml.quit()
+
+    def disconnect(self):
+        self.client.start_disconnect()
+
+
+class GObjectWSGIServer(WSGIServer):
+
+    def server_activate(self):
+        WSGIServer.server_activate(self)
+        gobject.io_add_watch(self.socket, gobject.IO_IN, self._listener)
+
+    def _listener(self, sock, *args):
+        self._handle_request_noblock()
+        return True
+
+
+config = {
+    'jid': 'from@example.com',
+    'password': 'FILL_ME_IN',
+    'to_jid': 'to@example.com',
+    'hostname': None,
+    'listen_address': '',
+    'listen_port': 9199,
+}
+
+ml = gobject.MainLoop()
+app = XmppApp(config['jid'], config['password'], config['to_jid'], hostname=config.get('hostname'))
+server = make_server(config['listen_address'], config['listen_port'], app, server_class=GObjectWSGIServer)
+app.connect()
+ml.run()

@@ -1,0 +1,15 @@
+[Unit]
+Description=Prometheus XMPP Alerts
+Documentation=https://jelmer.uk/code/prometheus-xmpp-alerts
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Restart=always
+EnvironmentFile=/etc/default/prometheus-xmpp-alerts
+User=prometheus
+Group=prometheus
+ExecStart=/usr/bin/prometheus-xmpp-alerts
+
+[Install]
+WantedBy=multi-user.target
