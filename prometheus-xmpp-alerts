@@ -16,6 +16,8 @@ import json
 import os
 import nbxmpp
 import logging
+import optparse
+import yaml
 try:
     from gi.repository import GObject as gobject
 except ImportError:
@@ -23,6 +25,7 @@ except ImportError:
 
 from wsgiref.simple_server import WSGIServer, make_server
 
+DEFAULT_CONF_PATH = '/etc/prometheus/xmpp-alerts.yml'
 consoleloghandler = logging.StreamHandler()
 root_log = logging.getLogger('nbxmpp')
 #root_log.setLevel('DEBUG')
@@ -113,15 +116,13 @@ class GObjectWSGIServer(WSGIServer):
         self._handle_request_noblock()
         return True
 
+parser = optparse.OptionParser()
+parser.add_option('--config', dest='config_path',
+                  type=str, default=DEFAULT_CONF_PATH,
+                  help='Path to configuration file.')
+options, args = parser.parse_args()
 
-config = {
-    'jid': 'from@example.com',
-    'password': 'FILL_ME_IN',
-    'to_jid': 'to@example.com',
-    'hostname': None,
-    'listen_address': '',
-    'listen_port': 9199,
-}
+config = yaml.load(open(options.config_path))
 
 ml = gobject.MainLoop()
 app = XmppApp(config['jid'], config['password'], config['to_jid'], hostname=config.get('hostname'))

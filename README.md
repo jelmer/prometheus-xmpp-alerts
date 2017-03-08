@@ -17,5 +17,5 @@ receivers:
 Then start this script, after editing the config dict:
 
 ```shell
-$ python3 prometheus_xmpp.py
+$ python3 prometheus-xmpp-alerts
 ```
