@@ -9,6 +9,9 @@ Restart=always
 EnvironmentFile=/etc/default/prometheus-xmpp-alerts
 User=prometheus
 Group=prometheus
+StandardError=syslog
+Restart=on-failure
+KillSignal=SIGQUIT
 ExecStart=/usr/bin/prometheus-xmpp-alerts
 
 [Install]
