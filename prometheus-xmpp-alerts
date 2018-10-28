@@ -8,15 +8,15 @@
 #   webhook_configs:
 #   - url: 'http://192.168.2.1:9199/alert'
 #
-# Then start this script, after editing the config dict:
-# $ python3 prometheus_xmpp.py
+# Edit xmpp-alerts.yml.example, then run:
+# $ python3 prometheus-xmpp-alerts --config=xmpp-alerts.yml.example
 
+import argparse
 import sys
 import json
 import os
 import nbxmpp
 import logging
-import optparse
 import yaml
 try:
     from gi.repository import GObject as gobject
@@ -116,13 +116,13 @@ class GObjectWSGIServer(WSGIServer):
         self._handle_request_noblock()
         return True
 
-parser = optparse.OptionParser()
-parser.add_option('--config', dest='config_path',
-                  type=str, default=DEFAULT_CONF_PATH,
-                  help='Path to configuration file.')
-options, args = parser.parse_args()
+parser = argparse.ArgumentParser()
+parser.add_argument('--config', dest='config_path',
+                    type=str, default=DEFAULT_CONF_PATH,
+                    help='Path to configuration file.')
+args = parser.parse_args()
 
-config = yaml.load(open(options.config_path))
+config = yaml.load(open(args.config_path))
 
 ml = gobject.MainLoop()
 app = XmppApp(config['jid'], config['password'], config['to_jid'], hostname=config.get('hostname'))
