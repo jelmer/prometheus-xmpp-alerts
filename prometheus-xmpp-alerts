@@ -23,13 +23,10 @@ import logging
 import yaml
 
 DEFAULT_CONF_PATH = '/etc/prometheus/xmpp-alerts.yml'
-consoleloghandler = logging.StreamHandler()
-root_log = logging.getLogger('nbxmpp')
-#root_log.setLevel('DEBUG')
-root_log.addHandler(consoleloghandler)
 
 
 def create_message(message):
+    """Create the message to deliver."""
     for i, alert in enumerate(message['alerts']):
         yield '%s, %d/%d, %s, %s' % (
             message['status'].upper(), i + 1, len(message['alerts']),
@@ -71,14 +68,22 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--config', dest='config_path',
                     type=str, default=DEFAULT_CONF_PATH,
                     help='Path to configuration file.')
+parser.add_argument("-q", "--quiet", help="set logging to ERROR",
+                    action="store_const", dest="loglevel",
+                    const=logging.ERROR, default=logging.INFO)
+parser.add_argument("-d", "--debug", help="set logging to DEBUG",
+                    action="store_const", dest="loglevel",
+                    const=logging.DEBUG, default=logging.INFO)
+
 args = parser.parse_args()
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(levelname)-8s %(message)s')
+# Setup logging.
+logging.basicConfig(level=args.loglevel,
+                        format='%(levelname)-8s %(message)s')
 
 config = yaml.load(open(args.config_path))
 
-app = XmppApp(config['jid'], config['password'])
+app = XmppApp(config['jid'], config.get('password'))
 app.connect()
 loop = asyncio.get_event_loop()
 
@@ -102,9 +107,10 @@ def wsgi_application(environ, start_response):
     else:
         start_response('404 Not Found', [])
         return [b'Please access /test or /alert']
-    id_ = app.send_message(mto=config['to_jid'],
-                  mbody=text,
-                  mtype='chat')
+    id_ = app.send_message(
+            mto=config['to_jid'],
+            mbody=text,
+            mtype='chat')
     start_response('200 OK', [])
     return [('Sent message with id %s' %  id_).encode('utf-8')]
 
