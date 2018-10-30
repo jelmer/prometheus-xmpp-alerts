@@ -1,6 +1,7 @@
 prometheus-xmpp-alerts
 ======================
-Simple HTTP web server that forwards prometheus alerts over XMPP.
+
+A simple web hook that forwards prometheus alerts over XMPP.
 
 Usage
 -----
@@ -14,8 +15,27 @@ receivers:
   - url: 'http://192.168.2.1:9199/alert'
 ```
 
-Then start this script, after editing the config dict:
+Edit the configuration file (defaults to ``/etc/prometheus/xmpp-alerts.yml``):
+
+```yaml
+jid: 'alertmanager@example.com'
+password: 'PASSWORD'
+to_jid: 'jelmer@example.com'
+listen_address: '192.168.2.1'
+listen_port: 9199
+```
+
+And run the web hook::
 
 ```shell
 $ python3 prometheus-xmpp-alerts
 ```
+
+Testing
+-------
+
+The web hook can be accessed on two paths:
+
+ * ``/alerts``: used by Prometheus to deliver alerts, expects POST requests
+   with JSON body
+ * ``/test``: delivers a test message
