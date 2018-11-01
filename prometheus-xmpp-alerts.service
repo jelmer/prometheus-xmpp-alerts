@@ -6,7 +6,6 @@ After=network-online.target
 
 [Service]
 Restart=always
-EnvironmentFile=/etc/default/prometheus-xmpp-alerts
 User=prometheus
 Group=prometheus
 StandardError=syslog
