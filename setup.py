@@ -29,5 +29,5 @@ setup(name='prometheus-xmpp-alerts',
           'Operating System :: Microsoft :: Windows',
           'Topic :: Software Development :: Version Control',
       ],
-      install_requires=['slixmpp', 'aiowsgi'],
+      install_requires=['slixmpp', 'aiowsgi', 'yaml'],
       )
