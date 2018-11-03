@@ -1,0 +1,5 @@
+prometheus-xmpp-alerts (0.1-1) UNRELEASED; urgency=medium
+
+  * Initial release. (Closes: #XXXXXX)
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Sat, 03 Nov 2018 15:53:49 +0000

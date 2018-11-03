@@ -1,0 +1,17 @@
+[Unit]
+Description=Prometheus XMPP Alert Hook
+Documentation=https://jelmer.uk/code/prometheus-xmpp-alerts
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Restart=always
+User=prometheus
+Group=prometheus
+StandardError=syslog
+Restart=on-failure
+KillSignal=SIGQUIT
+ExecStart=/usr/bin/prometheus-xmpp-alerts
+
+[Install]
+WantedBy=multi-user.target
