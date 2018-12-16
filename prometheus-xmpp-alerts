@@ -15,11 +15,9 @@ import aiowsgi
 import argparse
 import asyncio
 import logging
-import sys
 import json
-import os
 import slixmpp
-import logging
+import shlex
 import yaml
 
 from prometheus_xmpp import create_message
@@ -34,10 +32,10 @@ class XmppApp(slixmpp.ClientXMPP):
         self.auto_authorize = True
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.message)
-        self.register_plugin('xep_0030') # Service Discovery
-        self.register_plugin('xep_0004') # Data Forms
-        self.register_plugin('xep_0060') # PubSub
-        self.register_plugin('xep_0199') # XMPP Ping
+        self.register_plugin('xep_0030')  # Service Discovery
+        self.register_plugin('xep_0004')  # Data Forms
+        self.register_plugin('xep_0060')  # PubSub
+        self.register_plugin('xep_0199')  # XMPP Ping
 
     def start(self, event):
         """Process the session_start event.
@@ -57,7 +55,14 @@ class XmppApp(slixmpp.ClientXMPP):
         # TODO(jelmer): Allow ack/nack here
         # TODO(jelmer): Allow silencing here
         if msg['type'] in ('chat', 'normal'):
-            msg.reply("Unknown command: \n%(body)s" % msg).send()
+            args = shlex.split(msg['body'])
+            if args == []:
+                response = "No command specified"
+            elif args[0] == 'help':
+                response = "No supported commands."
+            else:
+                response = "Unknown command: %s" % args[0]
+            msg.reply(response).send()
 
 
 parser = argparse.ArgumentParser()
@@ -74,14 +79,14 @@ parser.add_argument("-d", "--debug", help="set logging to DEBUG",
 args = parser.parse_args()
 
 # Setup logging.
-logging.basicConfig(level=args.loglevel,
-                        format='%(levelname)-8s %(message)s')
+logging.basicConfig(level=args.loglevel, format='%(levelname)-8s %(message)s')
 
 config = yaml.load(open(args.config_path))
 
 app = XmppApp(config['jid'], config.get('password'))
 app.connect()
 loop = asyncio.get_event_loop()
+
 
 @asyncio.coroutine
 def wsgi_application(environ, start_response):
@@ -108,7 +113,7 @@ def wsgi_application(environ, start_response):
             mbody=text,
             mtype='chat')
     start_response('200 OK', [])
-    return [('Sent message with id %s' %  id_).encode('utf-8')]
+    return [('Sent message with id %s' % id_).encode('utf-8')]
 
 
 srv = aiowsgi.create_server(
