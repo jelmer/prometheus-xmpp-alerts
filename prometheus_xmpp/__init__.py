@@ -12,7 +12,7 @@
 # $ python3 prometheus-xmpp-alerts --config=xmpp-alerts.yml.example
 
 
-__version__ = (0, 1)
+__version__ = (0, 2)
 version_string = '.'.join(map(str, __version__))
 
 
