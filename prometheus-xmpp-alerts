@@ -22,15 +22,9 @@ import slixmpp
 import logging
 import yaml
 
+from prometheus_xmpp import create_message
+
 DEFAULT_CONF_PATH = '/etc/prometheus/xmpp-alerts.yml'
-
-
-def create_message(message):
-    """Create the message to deliver."""
-    for i, alert in enumerate(message['alerts']):
-        yield '%s, %d/%d, %s, %s' % (
-            message['status'].upper(), i + 1, len(message['alerts']),
-            alert['startsAt'], alert['annotations']['summary'])
 
 
 class XmppApp(slixmpp.ClientXMPP):

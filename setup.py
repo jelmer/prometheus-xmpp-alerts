@@ -18,6 +18,7 @@ setup(name='prometheus-xmpp-alerts',
           "GitHub": "https://github.com/jelmer/prometheus-xmpp-alerts",
       },
       keywords="prometheus xmpp jabber",
+      packages=['prometheus_xmpp'],
       scripts=['prometheus-xmpp-alerts'],
       classifiers=[
           'Development Status :: 3 - Alpha',
