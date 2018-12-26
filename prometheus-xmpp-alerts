@@ -87,7 +87,8 @@ args = parser.parse_args()
 # Setup logging.
 logging.basicConfig(level=args.loglevel, format='%(levelname)-8s %(message)s')
 
-config = yaml.load(open(args.config_path))
+with open(args.config_path) as f:
+    config = yaml.load(f)
 
 app = XmppApp(config['jid'], config.get('password'))
 app.connect()
