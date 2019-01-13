@@ -5,3 +5,6 @@ listen_address: '127.0.0.1'
 listen_port: 9199
 # JID to send alerts to
 to_jid: 'jelmer@example.com'
+# List of JIDs that are allowed to query alerts and set silences. Defaults to
+# to_jid.
+amtool_allowed: []

@@ -12,6 +12,9 @@
 # $ python3 prometheus-xmpp-alerts --config=xmpp-alerts.yml.example
 
 
+import subprocess
+
+
 __version__ = (0, 2)
 version_string = '.'.join(map(str, __version__))
 
@@ -22,3 +25,12 @@ def create_message(message):
         yield '%s, %d/%d, %s, %s' % (
             message['status'].upper(), i + 1, len(message['alerts']),
             alert['startsAt'], alert['annotations']['summary'])
+
+
+def run_amtool(args):
+    """Run amtool with the specified arguments."""
+    # TODO(jelmer): Support setting the current user, e.g. for silence ownership.
+    ret = subprocess.run(
+        ["/usr/bin/amtool"] + args, shell=False, text=True,
+        stdout=subprocess.PIPE)
+    return ret.stdout

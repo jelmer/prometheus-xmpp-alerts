@@ -31,6 +31,9 @@ And run the web hook::
 $ python3 prometheus-xmpp-alerts
 ```
 
+If you have [amtool](https://github.com/prometheus/alertmanager#amtool) set up,
+then you can also allow ``to_jid`` to see existing alerts and manage silences.
+
 Testing
 -------
 
