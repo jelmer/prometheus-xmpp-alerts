@@ -1,8 +1,9 @@
-prometheus-xmpp-alerts (0.1-2) UNRELEASED; urgency=medium
+prometheus-xmpp-alerts (0.3-1) UNRELEASED; urgency=medium
 
   * Install xmpp-alerts.yml to the right path.
+  * New upstream release.
 
- -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 14 Jan 2019 21:41:26 +0000
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 14 Jan 2019 21:49:40 +0000
 
 prometheus-xmpp-alerts (0.1-1) unstable; urgency=medium
 
