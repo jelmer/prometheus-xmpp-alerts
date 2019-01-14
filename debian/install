@@ -1,1 +1,1 @@
-xmpp-alerts.yml.example /etc/prometheus/xmpp-alerts.yml
+debian/xmpp-alerts.yml /etc/prometheus
