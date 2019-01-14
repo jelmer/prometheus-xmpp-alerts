@@ -2,6 +2,7 @@ prometheus-xmpp-alerts (0.3-1) UNRELEASED; urgency=medium
 
   * Install xmpp-alerts.yml to the right path.
   * New upstream release.
+   + Suggests prometheus-alertmanager for amtool integration.
 
  -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 14 Jan 2019 21:49:40 +0000
 

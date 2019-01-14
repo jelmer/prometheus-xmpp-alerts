@@ -23,6 +23,7 @@ Depends: ${misc:Depends},
          python3-slixmpp,
          python3-aiowsgi,
          python3-yaml
+Suggests: prometheus-alertmanager
 Description: web hook that forwards prometheus alerts over XMPP
  This package provides a web hook for the prometheus alertmanager
  that can deliver alerts from prometheus over XMPP (Jabber).
