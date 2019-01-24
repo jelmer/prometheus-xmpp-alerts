@@ -31,8 +31,18 @@ And run the web hook::
 $ python3 prometheus-xmpp-alerts
 ```
 
+```shell
+$ python3 prometheus-xmpp-alerts
+```
+
 If you have [amtool](https://github.com/prometheus/alertmanager#amtool) set up,
 then you can also allow ``to_jid`` to see existing alerts and manage silences.
+
+Running via docker:
+
+```shell
+$ docker run --rm -e JID=alertmanager@example.com -e PASSWORD=PASSWORD -e TO_JID=jelmer@example.com -p 9199:9199 mhamzahkhan/prometheus-xmpp-alerts
+```
 
 Testing
 -------
