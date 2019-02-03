@@ -2,6 +2,7 @@ prometheus-xmpp-alerts (0.3+git20190128.4c8868d-1) UNRELEASED; urgency=medium
 
   * Fix watch file.
   * New upstream snapshot.
+  * Add dependency on prometheus-client.
 
  -- Jelmer Vernooĳ <jelmer@debian.org>  Sun, 03 Feb 2019 02:14:34 +0000
 
