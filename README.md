@@ -37,8 +37,9 @@ then you can also allow ``to_jid`` to see existing alerts and manage silences.
 Testing
 -------
 
-The web hook can be accessed on two paths:
+The web hook can be accessed on three paths:
 
  * ``/alerts``: used by Prometheus to deliver alerts, expects POST requests
    with JSON body
  * ``/test``: delivers a test message
+ * ``/metrics``: exposes statistics about number of alerts received
