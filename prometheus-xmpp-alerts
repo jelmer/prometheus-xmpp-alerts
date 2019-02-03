@@ -21,6 +21,10 @@ import shlex
 import sys
 import yaml
 
+from prometheus_client import (
+    make_wsgi_app,
+    Counter,
+    )
 from prometheus_xmpp import (
     create_message,
     run_amtool,
@@ -28,6 +32,11 @@ from prometheus_xmpp import (
 
 
 DEFAULT_CONF_PATH = '/etc/prometheus/xmpp-alerts.yml'
+
+alert_counter = Counter('alert_count', 'Total number of alerts delivered')
+test_counter = Counter('test_count', 'Total number of test alerts delivered')
+xmpp_message_counter = Counter(
+    'xmpp_message_count', 'Total number of XMPP messages received.')
 
 
 class XmppApp(slixmpp.ClientXMPP):
@@ -103,12 +112,16 @@ app = XmppApp(config['jid'], config.get('password'),
 app.connect()
 loop = asyncio.get_event_loop()
 
+prometheus_app = make_wsgi_app()
+
 
 @asyncio.coroutine
 def wsgi_application(environ, start_response):
     if environ['PATH_INFO'] == '/test':
         text = 'Test message.'
+        test_counter.inc()
     elif environ['PATH_INFO'] == '/alert':
+        alert_counter.inc()
         try:
             try:
                 content_length = int(environ['CONTENT_LENGTH'])
@@ -121,6 +134,8 @@ def wsgi_application(environ, start_response):
             start_response('422 Unprocessable Entity', [])
             return [str(e).encode('utf-8')]
         text = '\n'.join(create_message(alert))
+    elif environ['PATH_INFO'] == '/metrics':
+        return prometheus_app(environ, start_response)
     else:
         start_response('404 Not Found', [])
         return [b'Please access /test or /alert']
