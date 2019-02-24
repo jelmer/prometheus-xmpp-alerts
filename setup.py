@@ -31,4 +31,7 @@ setup(name='prometheus-xmpp-alerts',
           'Topic :: Software Development :: Version Control',
       ],
       install_requires=['slixmpp', 'aiowsgi', 'pyyaml', 'prometheus_client'],
+      extras_require={
+          'omemo': ['slixmpp-omemo'],
+          }
       )
