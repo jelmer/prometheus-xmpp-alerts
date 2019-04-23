@@ -10,7 +10,7 @@ setup(name='prometheus-xmpp-alerts',
       author_email="jelmer@jelmer.uk",
       url="https://jelmer.uk/code/prometheus-xmpp-alerts",
       description="Prometheus XMPP Alerts hook",
-      version='0.3',
+      version='0.3.1',
       license='Apachev2',
       project_urls={
           "Bug Tracker": "https://github.com/jelmer/prometheus-xmpp-alerts/issues",
@@ -31,4 +31,7 @@ setup(name='prometheus-xmpp-alerts',
           'Topic :: Software Development :: Version Control',
       ],
       install_requires=['slixmpp', 'aiowsgi', 'pyyaml', 'prometheus_client'],
+      extras_require={
+          'omemo': ['slixmpp-omemo'],
+          }
       )
