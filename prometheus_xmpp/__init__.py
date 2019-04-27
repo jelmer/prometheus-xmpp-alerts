@@ -15,7 +15,7 @@
 import subprocess
 
 
-__version__ = (0, 3)
+__version__ = (0, 3, 2)
 version_string = '.'.join(map(str, __version__))
 
 

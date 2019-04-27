@@ -1,3 +1,9 @@
+prometheus-xmpp-alerts (0.3.2-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Debian Janitor <janitor@jelmer.uk>  Sat, 27 Apr 2019 16:46:49 +0000
+
 prometheus-xmpp-alerts (0.3+git20190128.4c8868d-1) unstable; urgency=medium
 
   * Fix watch file.
