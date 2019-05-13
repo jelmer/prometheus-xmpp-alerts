@@ -151,9 +151,13 @@ async def serve_root(request):
 
 
 web_app = web.Application()
-web_app.router.add_get('/', serve_root)
-web_app.router.add_get('/test', serve_test)
-web_app.router.add_post('/alert', serve_alert)
-web_app.router.add_get('/metrics', serve_metrics)
+web_app.add_routes([
+    web.get('/', serve_root),
+    web.get('/test', serve_test),
+    web.post('/test', serve_test),
+    web.get('/alert', serve_alert),
+    web.post('/alert', serve_alert),
+    web.get('/metrics', serve_metrics),
+])
 
 web.run_app(web_app, host=config['listen_address'], port=config['listen_port'])
