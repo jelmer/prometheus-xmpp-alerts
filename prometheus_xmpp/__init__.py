@@ -28,11 +28,33 @@ def parse_timestring(ts):
 
 def create_message(message):
     """Create the message to deliver."""
+    common_labels = ''
+    if 'commonLabels' in message:
+        common_labels = ' ({})'.format(' '.join(value for key, value in message['commonLabels'].items()))
+
     for alert in message['alerts']:
-        yield '%s, %s, %s' % (
-            message['status'].upper(),
-            parse_timestring(alert['startsAt']).isoformat(timespec='seconds'),
-            alert['annotations']['summary'])
+
+        description = ''
+        if 'description' in alert['annotations']:
+            description = '\n{}'.format(alert['annotations']['description'])
+
+        labels = ''
+        if 'labels' in alert:
+            for label, value in alert['labels'].items():
+                print(label)
+                labels += '\n*{}:* {}'.format(label, value)
+
+        # timestamp = parse_timestring(alert['startsAt']).isoformat(timespec='seconds')
+        # if not alert['endsAt'].startswith('0001'):
+        #     timestamp = parse_timestring(alert['endsAt']).isoformat(timespec='seconds')
+
+        yield '*[{}] {}*{} {}{}'.format(
+            alert['status'].upper(),
+            alert['annotations']['summary'],
+            common_labels,
+            # timestamp,
+            description,
+            labels)
 
 
 def run_amtool(args):

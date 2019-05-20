@@ -128,7 +128,7 @@ async def serve_alert(request):
         alert = await request.json()
     except json.decoder.JSONDecodeError as e:
         return web.HTTPUnprocessableEntity(str(e))
-    text = '\n'.join(create_message(alert))
+    text = '\n--\n'.join(create_message(alert))
     id_ = app.send_message(
             mto=config['to_jid'],
             mbody=text,
