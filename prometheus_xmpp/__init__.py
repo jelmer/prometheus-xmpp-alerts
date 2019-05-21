@@ -26,7 +26,16 @@ def parse_timestring(ts):
     return datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S.%fZ')
 
 
-def create_message(message):
+def create_message_short(message):
+    """Create the message to deliver."""
+    for alert in message['alerts']:
+        yield '%s, %s, %s' % (
+            alert['status'].upper(),
+            parse_timestring(alert['startsAt']).isoformat(timespec='seconds'),
+            alert['annotations']['summary'])
+
+
+def create_message_full(message):
     """Create the message to deliver."""
     group_labels = ''
     if 'groupLabels' in message:
@@ -41,14 +50,13 @@ def create_message(message):
         labels = ''
         if 'labels' in alert:
             for label, value in alert['labels'].items():
-                print(label)
                 labels += '\n*{}:* {}'.format(label, value)
 
         # timestamp = parse_timestring(alert['startsAt']).isoformat(timespec='seconds')
         # if not alert['endsAt'].startswith('0001'):
         #     timestamp = parse_timestring(alert['endsAt']).isoformat(timespec='seconds')
 
-        yield '*[{}] {}*{} {}{}'.format(
+        yield '*[{}] {}*{}{}{}'.format(
             alert['status'].upper(),
             alert['annotations']['summary'],
             group_labels,

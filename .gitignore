@@ -1,2 +1,3 @@
 prometheus_xmpp_alerts.egg-info
 .eggs
+.venv
