@@ -1,0 +1,16 @@
+language: python
+sudo: false
+cache: pip
+dist: xenial
+
+python:
+  - 3.6
+  - 3.7
+
+install:
+  - pip install pyasn1 flake8
+  - python setup.py develop
+
+script:
+  - python setup.py test
+  - flake8

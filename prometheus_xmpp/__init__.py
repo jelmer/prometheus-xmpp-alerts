@@ -23,6 +23,7 @@ version_string = '.'.join(map(str, __version__))
 def parse_timestring(ts):
     # strptime doesn't understand nanoseconds, so discard the last three digits
     ts = re.sub('\\.([0-9]{0,6})([0-9]{0,3})Z$', r'.\1Z', ts)
+
     return datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S.%fZ')
 
 
@@ -37,7 +38,8 @@ def create_message(message):
 
 def run_amtool(args):
     """Run amtool with the specified arguments."""
-    # TODO(jelmer): Support setting the current user, e.g. for silence ownership.
+    # TODO(jelmer): Support setting the current user, e.g. for silence
+    # ownership.
     ret = subprocess.run(
         ["/usr/bin/amtool"] + args, shell=False, text=True,
         stdout=subprocess.PIPE)
