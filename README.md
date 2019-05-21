@@ -50,7 +50,7 @@ If you don't set the message format option, the `short` format will be used.
 Testing
 -------
 The web hook can be accessed on three paths:
- * ``/alerts``: used by Prometheus to deliver alerts, expects POST requests
+ * ``/alert``: used by Prometheus to deliver alerts, expects POST requests
    with JSON body
  * ``/test``: delivers a test message
  * ``/metrics``: exposes statistics about number of alerts received
