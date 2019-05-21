@@ -23,6 +23,7 @@ password: 'PASSWORD'
 to_jid: 'jelmer@example.com'
 listen_address: '192.168.2.1'
 listen_port: 9199
+format: 'short'
 ```
 
 And run the web hook::
