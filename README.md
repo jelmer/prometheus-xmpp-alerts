@@ -40,10 +40,10 @@ If you don't set the message format option, the `short` format will be used.
 * **short**
   > FIRING, 2019-05-17T18:48:18, Alert Summary
 * **full**
-  > **[FIRING] Alert Summary** (groupLabelValue1 groupLabelValue2)
-  > This is the description of the test alert.
-  > **label1**: value1
-  > **label2**: value2
+  > **[FIRING] Alert Summary** (groupLabelValue1 groupLabelValue2)  
+  > This is the description of the test alert.  
+  > **label1**: value1  
+  > **label2**: value2  
   > **label3**: value3
 
 
