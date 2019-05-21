@@ -28,9 +28,9 @@ def parse_timestring(ts):
 
 def create_message(message):
     """Create the message to deliver."""
-    common_labels = ''
-    if 'commonLabels' in message:
-        common_labels = ' ({})'.format(' '.join(value for key, value in message['commonLabels'].items()))
+    group_labels = ''
+    if 'groupLabels' in message:
+        group_labels = ' ({})'.format(' '.join(value for key, value in message['groupLabels'].items()))
 
     for alert in message['alerts']:
 
@@ -51,7 +51,7 @@ def create_message(message):
         yield '*[{}] {}*{} {}{}'.format(
             alert['status'].upper(),
             alert['annotations']['summary'],
-            common_labels,
+            group_labels,
             # timestamp,
             description,
             labels)
