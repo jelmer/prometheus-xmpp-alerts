@@ -5,7 +5,8 @@
 from datetime import datetime
 import unittest
 
-from prometheus_xmpp import create_message_short, create_message_full, parse_timestring
+from prometheus_xmpp import \
+    create_message_short, create_message_full, parse_timestring
 
 
 class CreateMessageTests(unittest.TestCase):
@@ -53,7 +54,10 @@ class CreateMessageTests(unittest.TestCase):
 
     def test_create_message_full(self):
         self.assertEqual(
-            ['*[FIRING] Test Alert* (groupLabelValue1 groupLabelValue2)\nThis is just a test alert.\n*test:* true\n*severity:* test'],
+            ['*[FIRING] Test Alert* (groupLabelValue1 groupLabelValue2)'
+                + '\nThis is just a test alert.'
+                + '\n*test:* true'
+                + '\n*severity:* test'],
             list(create_message_full(self.message)))
 
 

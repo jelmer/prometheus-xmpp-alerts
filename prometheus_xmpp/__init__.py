@@ -39,7 +39,9 @@ def create_message_full(message):
     """Create the message to deliver."""
     group_labels = ''
     if 'groupLabels' in message:
-        group_labels = ' ({})'.format(' '.join(value for key, value in message['groupLabels'].items()))
+        group_labels = ' ({})'.format(' '.join(value for key,
+                                               value in message['groupLabels']
+                                               .items()))
 
     for alert in message['alerts']:
 
@@ -52,9 +54,11 @@ def create_message_full(message):
             for label, value in alert['labels'].items():
                 labels += '\n*{}:* {}'.format(label, value)
 
-        # timestamp = parse_timestring(alert['startsAt']).isoformat(timespec='seconds')
+        # timestamp = parse_timestring(
+        #                 alert['startsAt']).isoformat(timespec='seconds')
         # if not alert['endsAt'].startswith('0001'):
-        #     timestamp = parse_timestring(alert['endsAt']).isoformat(timespec='seconds')
+        #     timestamp = parse_timestring(
+        #                     alert['endsAt']).isoformat(timespec='seconds')
 
         yield '*[{}] {}*{}{}{}'.format(
             alert['status'].upper(),
