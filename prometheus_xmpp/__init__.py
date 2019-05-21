@@ -59,7 +59,8 @@ def create_message(message):
 
 def run_amtool(args):
     """Run amtool with the specified arguments."""
-    # TODO(jelmer): Support setting the current user, e.g. for silence ownership.
+    # TODO(jelmer): Support setting the current user, e.g. for silence
+    # ownership.
     ret = subprocess.run(
         ["/usr/bin/amtool"] + args, shell=False, text=True,
         stdout=subprocess.PIPE)

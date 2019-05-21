@@ -13,7 +13,8 @@ setup(name='prometheus-xmpp-alerts',
       version='0.3.2',
       license='Apachev2',
       project_urls={
-          "Bug Tracker": "https://github.com/jelmer/prometheus-xmpp-alerts/issues",
+          "Bug Tracker":
+              "https://github.com/jelmer/prometheus-xmpp-alerts/issues",
           "Repository": "https://www.jelmer.uk/code/prometheus-xmpp-alerts",
           "GitHub": "https://github.com/jelmer/prometheus-xmpp-alerts",
       },
