@@ -10,27 +10,27 @@
 #
 # Edit xmpp-alerts.yml.example, then run:
 # $ python3 prometheus-xmpp-alerts --config=xmpp-alerts.yml.example
-
-from aiohttp import web
 import argparse
-import asyncio
-import logging
 import json
-import slixmpp
+import logging
 import shlex
+import socket
 import sys
-import yaml
 
+import slixmpp
+import yaml
+from aiohttp import web
 from prometheus_client import (
     Counter,
     generate_latest,
     CONTENT_TYPE_LATEST,
-    )
+)
+
 from prometheus_xmpp import (
     create_message_short,
     create_message_full,
     run_amtool,
-    )
+)
 
 
 DEFAULT_CONF_PATH = '/etc/prometheus/xmpp-alerts.yml'
@@ -109,7 +109,10 @@ logging.basicConfig(level=args.loglevel, format='%(levelname)-8s %(message)s')
 with open(args.config_path) as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
 
-app = XmppApp(config['jid'], config.get('password'),
+hostname = socket.gethostname()
+jid = "{}/{}".format(config['jid'], hostname)
+
+app = XmppApp(jid, config.get('password'),
               config.get('amtool_allowed', [config['to_jid']]))
 app.connect()
 
