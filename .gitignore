@@ -1,3 +1,8 @@
 prometheus_xmpp_alerts.egg-info
 .eggs
 .venv
+prometheus_xmpp/__pycache__
+.idea
+prometheus-xmpp-alerts.iml
+test.json
+xmpp-alerts.yml.dev

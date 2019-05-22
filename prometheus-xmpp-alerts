@@ -13,25 +13,22 @@
 
 from aiohttp import web
 import argparse
-import asyncio
 import logging
 import json
 import slixmpp
 import shlex
-import sys
 import yaml
 
 from prometheus_client import (
     Counter,
     generate_latest,
     CONTENT_TYPE_LATEST,
-    )
+)
 from prometheus_xmpp import (
     create_message_short,
     create_message_full,
     run_amtool,
-    )
-
+)
 
 DEFAULT_CONF_PATH = '/etc/prometheus/xmpp-alerts.yml'
 
@@ -107,7 +104,7 @@ args = parser.parse_args()
 logging.basicConfig(level=args.loglevel, format='%(levelname)-8s %(message)s')
 
 with open(args.config_path) as f:
-    config = yaml.load(f)
+    config = yaml.load(f, Loader=yaml.FullLoader)
 
 app = XmppApp(config['jid'], config.get('password'),
               config.get('amtool_allowed', [config['to_jid']]))
@@ -117,9 +114,9 @@ app.connect()
 async def serve_test(request):
     test_counter.inc()
     id_ = app.send_message(
-            mto=config['to_jid'],
-            mbody='Test message',
-            mtype='chat')
+        mto=config['to_jid'],
+        mbody='Test message',
+        mtype='chat')
     return web.Response(body='Sent message with id %s' % id_)
 
 
@@ -134,9 +131,9 @@ async def serve_alert(request):
     else:
         text = '\n--\n'.join(create_message_short(alert))
     id_ = app.send_message(
-            mto=config['to_jid'],
-            mbody=text,
-            mtype='chat')
+        mto=config['to_jid'],
+        mbody=text,
+        mtype='chat')
     return web.Response(body='Sent message with id %s' % id_)
 
 
