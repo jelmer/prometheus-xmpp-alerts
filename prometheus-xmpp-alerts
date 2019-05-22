@@ -128,7 +128,7 @@ async def serve_alert(request):
     try:
         alert = await request.json()
     except json.decoder.JSONDecodeError as e:
-        return web.HTTPUnprocessableEntity(str(e))
+        raise web.HTTPUnprocessableEntity(str(e))
     if 'format' in config and config['format'] == 'full':
         text = '\n--\n'.join(create_message_full(alert))
     else:
