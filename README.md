@@ -5,6 +5,7 @@ A simple web hook that forwards prometheus alerts over XMPP.
 
 Usage
 -----
+
 To use, configure a web hook in alertmanager. E.g.:
 
 ```yaml
@@ -36,9 +37,12 @@ then you can also allow ``to_jid`` to see existing alerts and manage silences.
 
 Message Format
 --------------
+
 If you don't set the message format option, the `short` format will be used.
+
 * **short**
   > FIRING, 2019-05-17T18:48:18, Alert Summary
+
 * **full**
   > **[FIRING] Alert Summary** (groupLabelValue1 groupLabelValue2)  
   > This is the description of the test alert.  
@@ -49,7 +53,9 @@ If you don't set the message format option, the `short` format will be used.
 
 Testing
 -------
+
 The web hook can be accessed on three paths:
+
  * ``/alert``: used by Prometheus to deliver alerts, expects POST requests
    with JSON body
  * ``/test``: delivers a test message

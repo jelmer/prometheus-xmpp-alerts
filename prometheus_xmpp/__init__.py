@@ -27,7 +27,7 @@ def parse_timestring(ts):
 
 
 def create_message_short(message):
-    """Create the message to deliver."""
+    """Create the short form message to deliver."""
     for alert in message['alerts']:
         yield '%s, %s, %s' % (
             alert['status'].upper(),
@@ -36,15 +36,13 @@ def create_message_short(message):
 
 
 def create_message_full(message):
-    """Create the message to deliver."""
+    """Create the long form message to deliver."""
     group_labels = ''
     if 'groupLabels' in message:
-        group_labels = ' ({})'.format(' '.join(value for key,
-                                               value in message['groupLabels']
-                                               .items()))
+        group_labels = ' ({})'.format(' '.join(
+            value for key, value in message['groupLabels'].items()))
 
     for alert in message['alerts']:
-
         description = ''
         if 'description' in alert['annotations']:
             description = '\n{}'.format(alert['annotations']['description'])
@@ -54,17 +52,10 @@ def create_message_full(message):
             for label, value in alert['labels'].items():
                 labels += '\n*{}:* {}'.format(label, value)
 
-        # timestamp = parse_timestring(
-        #                 alert['startsAt']).isoformat(timespec='seconds')
-        # if not alert['endsAt'].startswith('0001'):
-        #     timestamp = parse_timestring(
-        #                     alert['endsAt']).isoformat(timespec='seconds')
-
         yield '*[{}] {}*{}{}{}'.format(
             alert['status'].upper(),
             alert['annotations']['summary'],
             group_labels,
-            # timestamp,
             description,
             labels)
 

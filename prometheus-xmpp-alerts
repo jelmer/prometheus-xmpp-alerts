@@ -129,11 +129,11 @@ async def serve_alert(request):
     try:
         alert = await request.json()
     except json.decoder.JSONDecodeError as e:
-        raise web.HTTPUnprocessableEntity(text=str(e))
+        raise web.HTTPUnprocessableEntity(str(e))
     if 'format' in config and config['format'] == 'full':
         text = '\n--\n'.join(create_message_full(alert))
     else:
-        text = '\n--\n'.join(create_message_short(alert))
+        text = '\n'.join(create_message_short(alert))
     id_ = app.send_message(
         mto=config['to_jid'],
         mbody=text,
@@ -155,6 +155,8 @@ web_app = web.Application()
 web_app.add_routes([
     web.get('/', serve_root),
     web.get('/test', serve_test),
+    web.post('/test', serve_test),
+    web.get('/alert', serve_alert),
     web.post('/alert', serve_alert),
     web.get('/metrics', serve_metrics),
 ])
