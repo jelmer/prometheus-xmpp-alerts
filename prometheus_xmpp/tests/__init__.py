@@ -5,26 +5,60 @@
 from datetime import datetime
 import unittest
 
-from prometheus_xmpp import create_message, parse_timestring
+from prometheus_xmpp import \
+    create_message_short, create_message_full, parse_timestring
 
 
 class CreateMessageTests(unittest.TestCase):
 
-    def test_create_message(self):
-        message = {
-            'alerts': [
-                {
-                    'startsAt': '2019-04-27T05:33:35.739602132Z',
-                    'annotations': {
-                        'summary': 'Something',
-                    },
-                }
-            ],
-            'status': 'firing',
-            }
+    message = {
+      "version": "4",
+      "groupKey": "test",
+      "status": "firing",
+      "receiver": "xmpp",
+      "groupLabels": {
+        "groupLabel1": "groupLabelValue1",
+        "groupLabel2": "groupLabelValue2"
+      },
+      "commonLabels": {
+        "commonLabel1": "commonLabelValue1",
+        "commonLabel2": "commonLabelValue2"
+      },
+      "commonAnnotations": {
+        "commonAnnotation1": "commonAnnotationValue1",
+        "commonAnnotation2": "commonAnnotationValue2"
+      },
+      "externalURL": "https://alertmanager.example.com",
+      "alerts": [
+        {
+          "status": "firing",
+          "labels": {
+            "test": "true",
+            "severity": "test"
+          },
+          "annotations": {
+            "summary": "Test Alert",
+            "description": "This is just a test alert."
+          },
+          "startsAt": "2019-04-12T23:20:50.123456789Z",
+          "endsAt": "2019-04-12T23:20:50.123456789Z",
+          "generatorURL": "curl"
+        }
+      ]
+    }
+
+    def test_create_message_short(self):
         self.assertEqual(
-            ['FIRING, 2019-04-27T05:33:35, Something'],
-            list(create_message(message)))
+            ['FIRING, 2019-04-12T23:20:50, Test Alert'],
+            list(create_message_short(self.message)))
+
+    def test_create_message_full(self):
+        self.assertEqual(
+            ['*[FIRING] Test Alert* (groupLabelValue1 groupLabelValue2)'
+                + '\nThis is just a test alert.'
+                + '\n*test:* true'
+                + '\n*severity:* test'],
+            list(create_message_full(self.message)))
 
 
 class ParseTimestringTests(unittest.TestCase):

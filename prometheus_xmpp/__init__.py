@@ -27,13 +27,38 @@ def parse_timestring(ts):
     return datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S.%fZ')
 
 
-def create_message(message):
-    """Create the message to deliver."""
+def create_message_short(message):
+    """Create the short form message to deliver."""
     for alert in message['alerts']:
         yield '%s, %s, %s' % (
-            message['status'].upper(),
+            alert['status'].upper(),
             parse_timestring(alert['startsAt']).isoformat(timespec='seconds'),
             alert['annotations']['summary'])
+
+
+def create_message_full(message):
+    """Create the long form message to deliver."""
+    group_labels = ''
+    if 'groupLabels' in message:
+        group_labels = ' ({})'.format(' '.join(
+            value for key, value in message['groupLabels'].items()))
+
+    for alert in message['alerts']:
+        description = ''
+        if 'description' in alert['annotations']:
+            description = '\n{}'.format(alert['annotations']['description'])
+
+        labels = ''
+        if 'labels' in alert:
+            for label, value in alert['labels'].items():
+                labels += '\n*{}:* {}'.format(label, value)
+
+        yield '*[{}] {}*{}{}{}'.format(
+            alert['status'].upper(),
+            alert['annotations']['summary'],
+            group_labels,
+            description,
+            labels)
 
 
 def run_amtool(args):
