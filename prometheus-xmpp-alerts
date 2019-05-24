@@ -27,7 +27,8 @@ from prometheus_client import (
     CONTENT_TYPE_LATEST,
     )
 from prometheus_xmpp import (
-    create_message,
+    create_message_short,
+    create_message_full,
     run_amtool,
     )
 
@@ -128,7 +129,10 @@ async def serve_alert(request):
         alert = await request.json()
     except json.decoder.JSONDecodeError as e:
         raise web.HTTPUnprocessableEntity(str(e))
-    text = '\n'.join(create_message(alert))
+    if 'format' in config and config['format'] == 'full':
+        text = '\n--\n'.join(create_message_full(alert))
+    else:
+        text = '\n'.join(create_message_short(alert))
     id_ = app.send_message(
             mto=config['to_jid'],
             mbody=text,
