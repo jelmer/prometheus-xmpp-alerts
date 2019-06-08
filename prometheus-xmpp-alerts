@@ -123,7 +123,7 @@ async def serve_test(request):
             mto=config['to_jid'],
             mbody='Test message',
             mtype='chat')
-    return web.Response(body='Sent message with id %s' % id_)
+    return web.Response(body='Sent message.')
 
 
 async def serve_alert(request):
@@ -140,7 +140,7 @@ async def serve_alert(request):
             mto=config['to_jid'],
             mbody=text,
             mtype='chat')
-    return web.Response(body='Sent message with id %s' % id_)
+    return web.Response(body='Sent message')
 
 
 async def serve_metrics(request):
