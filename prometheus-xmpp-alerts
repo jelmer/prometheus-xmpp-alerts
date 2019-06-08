@@ -107,7 +107,7 @@ args = parser.parse_args()
 logging.basicConfig(level=args.loglevel, format='%(levelname)-8s %(message)s')
 
 with open(args.config_path) as f:
-    config = yaml.load(f)
+    config = yaml.load(f, Loader=yaml.FullLoader)
 
 app = XmppApp(config['jid'], config.get('password'),
               config.get('amtool_allowed', [config['to_jid']]))
