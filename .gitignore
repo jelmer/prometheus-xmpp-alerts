@@ -1,2 +1,5 @@
 prometheus_xmpp_alerts.egg-info
 .eggs
+MANIFEST
+build
+dist
