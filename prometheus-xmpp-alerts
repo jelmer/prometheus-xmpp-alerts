@@ -78,15 +78,16 @@ class XmppApp(slixmpp.ClientXMPP):
             args = shlex.split(msg['body'])
             if args == []:
                 response = "No command specified"
-            elif args[0] in ('alert', 'silence'):
+            elif args[0].lower() in ('alert', 'silence'):
+                args[0] = args[0].lower()
                 if msg['from'].bare in self._amtool_allowed:
                     response = run_amtool(args)
                 else:
                     response = "Unauthorized JID."
-            elif args[0] == 'help':
+            elif args[0].lower() == 'help':
                 response = "Supported commands: help, alert, silence."
             else:
-                response = "Unknown command: %s" % args[0]
+                response = "Unknown command: %s" % args[0].lower()
             msg.reply(response).send()
 
 
