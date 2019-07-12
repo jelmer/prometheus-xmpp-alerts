@@ -86,10 +86,10 @@ class XmppApp(slixmpp.ClientXMPP):
         logging.info("Session started.")
         self.send_presence(ptype='available', pstatus='Active')
         self.get_roster()
-        xmpp_online.set(1)
+        online_gauge.set(1)
 
     def lost(self, event):
-        xmpp_online.set(0)
+        online_gauge.set(0)
         logging.info("Connection lost, exiting.")
         sys.exit(1)
 
