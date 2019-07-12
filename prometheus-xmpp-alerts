@@ -23,6 +23,7 @@ import yaml
 from aiohttp import web
 from prometheus_client import (
     Counter,
+    Gauge,
     generate_latest,
     CONTENT_TYPE_LATEST,
 )
@@ -40,6 +41,8 @@ alert_counter = Counter('alert_count', 'Total number of alerts delivered')
 test_counter = Counter('test_count', 'Total number of test alerts delivered')
 xmpp_message_counter = Counter(
     'xmpp_message_count', 'Total number of XMPP messages received.')
+online_gauge = Gauge(
+    'xmpp_online', 'Connected to XMPP server.')
 
 
 def read_password_from_command(cmd):
@@ -80,10 +83,13 @@ class XmppApp(slixmpp.ClientXMPP):
         Args:
           event: Event data (empty)
         """
+        logging.info("Session started.")
         self.send_presence(ptype='available', pstatus='Active')
         self.get_roster()
+        xmpp_online.set(1)
 
     def lost(self, event):
+        xmpp_online.set(0)
         logging.info("Connection lost, exiting.")
         sys.exit(1)
 
@@ -148,7 +154,10 @@ async def serve_test(request):
             mto=to_jid,
             mbody='Test message',
             mtype='chat')
-    return web.Response(body='Sent message.')
+    try:
+        return web.Response(body='Sent message.')
+    except slixmpp.xmlstream.xmlstream.NotConnectedError:
+        return web.Response(body='Did not send message.  Not online.')
 
 
 async def serve_alert(request):
@@ -162,11 +171,15 @@ async def serve_alert(request):
         text = '\n--\n'.join(create_message_full(alert))
     else:
         text = '\n'.join(create_message_short(alert))
-    id_ = app.send_message(
-            mto=to_jid,
-            mbody=text,
-            mtype='chat')
-    return web.Response(body='Sent message')
+    try:
+        id_ = app.send_message(
+                mto=to_jid,
+                mbody=text,
+                mtype='chat')
+        return web.Response(body='Sent message')
+    except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
+        return web.Response(body='Did not send message.  Not online: %s' % e)
+        logging.warning('Alert posted but we are not online: %s', e)
 
 
 async def serve_metrics(request):
