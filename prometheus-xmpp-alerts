@@ -111,6 +111,8 @@ class XmppApp(slixmpp.ClientXMPP):
                     response = "Unauthorized JID."
             elif args[0].lower() == 'help':
                 response = "Supported commands: help, alert, silence."
+                response += "\n\n"
+                response += run_amtool(['--help'])
             else:
                 response = "Unknown command: %s" % args[0].lower()
             msg.reply(response).send()

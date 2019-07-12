@@ -66,5 +66,5 @@ def run_amtool(args):
     # ownership.
     ret = subprocess.run(
         ["/usr/bin/amtool"] + args, shell=False, universal_newlines=True,
-        stdout=subprocess.PIPE)
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     return ret.stdout
