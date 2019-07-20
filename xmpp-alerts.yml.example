@@ -8,3 +8,5 @@ to_jid: 'jelmer@example.com'
 # List of JIDs that are allowed to query alerts and set silences. Defaults to
 # to_jid.
 amtool_allowed: []
+# Message format (short, full)
+format: 'short'

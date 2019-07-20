@@ -10,25 +10,27 @@
 #
 # Edit xmpp-alerts.yml.example, then run:
 # $ python3 prometheus-xmpp-alerts --config=xmpp-alerts.yml.example
-
-import aiowsgi
 import argparse
-import asyncio
-import logging
 import json
-import slixmpp
+import logging
 import shlex
+import socket
 import sys
-import yaml
 
+import slixmpp
+import yaml
+from aiohttp import web
 from prometheus_client import (
-    make_wsgi_app,
     Counter,
-    )
+    generate_latest,
+    CONTENT_TYPE_LATEST,
+)
+
 from prometheus_xmpp import (
-    create_message,
+    create_message_short,
+    create_message_full,
     run_amtool,
-    )
+)
 
 
 DEFAULT_CONF_PATH = '/etc/prometheus/xmpp-alerts.yml'
@@ -105,49 +107,60 @@ args = parser.parse_args()
 logging.basicConfig(level=args.loglevel, format='%(levelname)-8s %(message)s')
 
 with open(args.config_path) as f:
-    config = yaml.load(f)
+    config = yaml.load(f, Loader=yaml.FullLoader)
 
-app = XmppApp(config['jid'], config.get('password'),
+hostname = socket.gethostname()
+jid = "{}/{}".format(config['jid'], hostname)
+
+app = XmppApp(jid, config.get('password'),
               config.get('amtool_allowed', [config['to_jid']]))
 app.connect()
-loop = asyncio.get_event_loop()
-
-prometheus_app = make_wsgi_app()
 
 
-@asyncio.coroutine
-def wsgi_application(environ, start_response):
-    if environ['PATH_INFO'] == '/test':
-        text = 'Test message.'
-        test_counter.inc()
-    elif environ['PATH_INFO'] == '/alert':
-        alert_counter.inc()
-        try:
-            try:
-                content_length = int(environ['CONTENT_LENGTH'])
-            except KeyError:
-                alert = json.load(environ['wsgi.input'])
-            else:
-                alert = json.loads(environ['wsgi.input'].read(
-                    content_length).decode('utf-8'))
-        except json.decoder.JSONDecodeError as e:
-            start_response('422 Unprocessable Entity', [])
-            return [str(e).encode('utf-8')]
-        text = '\n'.join(create_message(alert))
-    elif environ['PATH_INFO'] == '/metrics':
-        return prometheus_app(environ, start_response)
+async def serve_test(request):
+    test_counter.inc()
+    id_ = app.send_message(
+            mto=config['to_jid'],
+            mbody='Test message',
+            mtype='chat')
+    return web.Response(body='Sent message.')
+
+
+async def serve_alert(request):
+    alert_counter.inc()
+    try:
+        alert = await request.json()
+    except json.decoder.JSONDecodeError as e:
+        raise web.HTTPUnprocessableEntity(str(e))
+    if 'format' in config and config['format'] == 'full':
+        text = '\n--\n'.join(create_message_full(alert))
     else:
-        start_response('404 Not Found', [])
-        return [b'Please access /test or /alert']
+        text = '\n'.join(create_message_short(alert))
     id_ = app.send_message(
             mto=config['to_jid'],
             mbody=text,
             mtype='chat')
-    start_response('200 OK', [])
-    return [('Sent message with id %s' % id_).encode('utf-8')]
+    return web.Response(body='Sent message')
 
 
-srv = aiowsgi.create_server(
-        wsgi_application, loop=loop,
-        port=config['listen_port'], host=config['listen_address'])
-loop.run_forever()
+async def serve_metrics(request):
+    resp = web.Response(body=generate_latest())
+    resp.content_type = CONTENT_TYPE_LATEST
+    return resp
+
+
+async def serve_root(request):
+    return web.Response(body='See /test, /alert or /metrics')
+
+
+web_app = web.Application()
+web_app.add_routes([
+    web.get('/', serve_root),
+    web.get('/test', serve_test),
+    web.post('/test', serve_test),
+    web.get('/alert', serve_alert),
+    web.post('/alert', serve_alert),
+    web.get('/metrics', serve_metrics),
+])
+
+web.run_app(web_app, host=config['listen_address'], port=config['listen_port'])
