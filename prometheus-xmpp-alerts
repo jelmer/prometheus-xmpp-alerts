@@ -107,7 +107,11 @@ args = parser.parse_args()
 logging.basicConfig(level=args.loglevel, format='%(levelname)-8s %(message)s')
 
 with open(args.config_path) as f:
-    config = yaml.load(f, Loader=yaml.FullLoader)
+    if getattr(yaml, 'FullLoader', None):
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    else:
+        # Backwards compatibility with older versions of Python
+        config = yaml.load(f)
 
 hostname = socket.gethostname()
 jid = "{}/{}".format(config['jid'], hostname)
