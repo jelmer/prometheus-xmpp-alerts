@@ -5,6 +5,7 @@ prometheus-xmpp-alerts (0.4.1-1) UNRELEASED; urgency=medium
 
   [ Jelmer Vernooĳ ]
   * New upstream release.
+  * Bump debhelper from old 11 to 12.
 
  -- Jelmer Vernooĳ <jelmer@debian.org>  Sat, 20 Jul 2019 14:02:42 +0000
 

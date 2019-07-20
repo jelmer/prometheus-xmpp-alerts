@@ -1,14 +1,15 @@
 Source: prometheus-xmpp-alerts
 Section: net
 Priority: optional
-Build-Depends: debhelper (>= 11),
+Build-Depends:
                dh-python,
                python3-all,
                python3-slixmpp,
                python3-setuptools,
                python3-aiowsgi,
                python3-yaml,
-               python3-prometheus-client
+               python3-prometheus-client,
+               debhelper-compat (= 12)
 Maintainer: Jelmer Vernooĳ <jelmer@debian.org>
 Standards-Version: 4.2.1
 Testsuite: autopkgtest-pkg-python
