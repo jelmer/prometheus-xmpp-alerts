@@ -8,6 +8,7 @@ prometheus-xmpp-alerts (0.4.1-1) UNRELEASED; urgency=medium
   * Bump debhelper from old 11 to 12.
   * Set upstream metadata fields: Contact.
   * Bump standards version to 4.4.0 (no changes).
+  * Add autopkgtest.
 
  -- Jelmer Vernooĳ <jelmer@debian.org>  Sat, 20 Jul 2019 14:02:42 +0000
 
