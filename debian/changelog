@@ -1,4 +1,4 @@
-prometheus-xmpp-alerts (0.4.1-1) UNRELEASED; urgency=medium
+prometheus-xmpp-alerts (0.4.1-1) unstable; urgency=medium
 
   [ Debian Janitor ]
   * New upstream release.
@@ -10,7 +10,7 @@ prometheus-xmpp-alerts (0.4.1-1) UNRELEASED; urgency=medium
   * Bump standards version to 4.4.0 (no changes).
   * Add autopkgtest.
 
- -- Jelmer Vernooĳ <jelmer@debian.org>  Sat, 20 Jul 2019 14:02:42 +0000
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Sat, 20 Jul 2019 14:09:48 +0000
 
 prometheus-xmpp-alerts (0.3+git20190128.4c8868d-1) unstable; urgency=medium
 
