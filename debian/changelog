@@ -1,3 +1,10 @@
+prometheus-xmpp-alerts (0.4.2-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+  * Depend on aiohttp rather than aiowsgi.
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Sat, 20 Jul 2019 14:22:48 +0000
+
 prometheus-xmpp-alerts (0.4.1-1) unstable; urgency=medium
 
   [ Debian Janitor ]
