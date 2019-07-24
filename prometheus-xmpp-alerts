@@ -122,15 +122,17 @@ app.connect()
 
 
 async def serve_test(request):
+    to_jid = request.match_info.get('to_jid', config['to_jid'])
     test_counter.inc()
     id_ = app.send_message(
-            mto=config['to_jid'],
+            mto=to_jid,
             mbody='Test message',
             mtype='chat')
     return web.Response(body='Sent message.')
 
 
 async def serve_alert(request):
+    to_jid = request.match_info.get('to_jid', config['to_jid'])
     alert_counter.inc()
     try:
         alert = await request.json()
@@ -141,7 +143,7 @@ async def serve_alert(request):
     else:
         text = '\n'.join(create_message_short(alert))
     id_ = app.send_message(
-            mto=config['to_jid'],
+            mto=to_jid,
             mbody=text,
             mtype='chat')
     return web.Response(body='Sent message')
@@ -161,9 +163,13 @@ web_app = web.Application()
 web_app.add_routes([
     web.get('/', serve_root),
     web.get('/test', serve_test),
+    web.get('/test/{to_jid}', serve_test),
     web.post('/test', serve_test),
+    web.post('/test/{to_jid}', serve_test),
     web.get('/alert', serve_alert),
+    web.get('/alert/{to_jid}', serve_alert),
     web.post('/alert', serve_alert),
+    web.post('/alert/{to_jid}', serve_alert),
     web.get('/metrics', serve_metrics),
 ])
 
