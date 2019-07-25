@@ -43,6 +43,8 @@ xmpp_message_counter = Counter(
     'xmpp_message_count', 'Total number of XMPP messages received.')
 online_gauge = Gauge(
     'xmpp_online', 'Connected to XMPP server.')
+last_alert_message_succeeded_gauge = Gauge(
+    'last_alert_message_succeeded', 'Lastalert message succeeded.')
 
 
 def read_password_from_command(cmd):
@@ -87,6 +89,7 @@ class XmppApp(slixmpp.ClientXMPP):
         self.send_presence(ptype='available', pstatus='Active')
         self.get_roster()
         online_gauge.set(1)
+        last_alert_message_succeeded_gauge.set(1)
 
     def lost(self, event):
         online_gauge.set(0)
@@ -169,19 +172,25 @@ async def serve_alert(request):
         alert = await request.json()
     except json.decoder.JSONDecodeError as e:
         raise web.HTTPUnprocessableEntity(str(e))
-    if 'format' in config and config['format'] == 'full':
-        text = '\n--\n'.join(create_message_full(alert))
-    else:
-        text = '\n'.join(create_message_short(alert))
     try:
-        id_ = app.send_message(
-                mto=to_jid,
-                mbody=text,
-                mtype='chat')
-        return web.Response(body='Sent message')
-    except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
-        return web.Response(body='Did not send message.  Not online: %s' % e)
-        logging.warning('Alert posted but we are not online: %s', e)
+        if 'format' in config and config['format'] == 'full':
+            text = '\n--\n'.join(create_message_full(alert))
+        else:
+            text = '\n'.join(create_message_short(alert))
+        try:
+            id_ = app.send_message(
+                    mto=to_jid,
+                    mbody=text,
+                    mtype='chat')
+            return web.Response(body='Sent message')
+            last_alert_message_succeeded_gauge.set(1)
+        except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
+            return web.Response(body='Did not send message.  Not online: %s' % e)
+            logging.warning('Alert posted but we are not online: %s', e)
+            last_alert_message_succeeded_gauge.set(0)
+    except Exception:
+        last_alert_message_succeeded_gauge.set(0)
+        raise
 
 
 async def serve_metrics(request):
