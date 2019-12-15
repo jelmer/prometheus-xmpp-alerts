@@ -31,4 +31,5 @@ setup(name='prometheus-xmpp-alerts',
           'Topic :: Software Development :: Version Control',
       ],
       install_requires=['slixmpp', 'aiohttp', 'pyyaml', 'prometheus_client'],
+      test_requires=['pytz'],
       )
