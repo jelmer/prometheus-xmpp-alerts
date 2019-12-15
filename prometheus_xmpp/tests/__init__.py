@@ -3,6 +3,7 @@
 #
 
 from datetime import datetime
+import pytz
 import unittest
 
 from prometheus_xmpp import \
@@ -65,20 +66,17 @@ class ParseTimestringTests(unittest.TestCase):
 
     def test_parse_with_nanoseconds(self):
         self.assertEqual(
-            datetime.strptime(
-                '2019-04-27T05:33:35.739602Z', '%Y-%m-%dT%H:%M:%S.%f%z'),
+            datetime(2019, 4, 27, 5, 33, 35, 739602, pytz.utc),
             parse_timestring('2019-04-27T05:33:35.739602132Z'))
 
     def test_parse_with_microseconds(self):
         self.assertEqual(
-            datetime.strptime(
-                '2019-04-27T05:33:35.739602Z', '%Y-%m-%dT%H:%M:%S.%f%z'),
+            datetime(2019, 4, 27, 5, 33, 35, 739602, pytz.utc),
             parse_timestring('2019-04-27T05:33:35.739602Z'))
 
     def test_parse_with_timezone(self):
         self.assertEqual(
-            datetime.strptime(
-                '2019-04-27T05:33:35.739602Z', '%Y-%m-%dT%H:%M:%S.%f%z'),
+            datetime(2019, 4, 27, 5, 33, 35, 739602, pytz.utc),
             parse_timestring('2019-04-27T05:33:35.739602+00:00'))
 
 

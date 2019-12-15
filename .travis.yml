@@ -4,8 +4,8 @@ cache: pip
 dist: xenial
 
 python:
-  - 3.6
   - 3.7
+  - 3.8
 
 install:
   - pip install pyasn1 flake8
