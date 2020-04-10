@@ -35,6 +35,13 @@ $ python3 prometheus-xmpp-alerts
 If you have [amtool](https://github.com/prometheus/alertmanager#amtool) set up,
 then you can also allow ``to_jid`` to see existing alerts and manage silences.
 
+Password Command
+----------------
+
+Instead of hardcoding your password, you can also use a `password_command`. The
+command should write the password to stdout. Only the first line (stripped of
+whitespaces) is being used as password.
+
 Message Format
 --------------
 

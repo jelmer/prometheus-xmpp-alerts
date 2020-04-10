@@ -1,6 +1,8 @@
 # Login details for the bot itself
 jid: 'alertmanager@example.com'
 password: 'PASSWORD'
+# (optional) command that produces the password
+# password_command: 'cat /run/secrets/foo'
 listen_address: '127.0.0.1'
 listen_port: 9199
 # JID to send alerts to
