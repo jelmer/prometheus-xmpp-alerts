@@ -11,7 +11,7 @@ Group=prometheus
 StandardError=syslog
 Restart=on-failure
 KillSignal=SIGQUIT
-ExecStart=/usr/bin/prometheus-xmpp-alerts
+ExecStart=/usr/bin/prometheus-xmpp-alerts -q
 
 [Install]
 WantedBy=multi-user.target
