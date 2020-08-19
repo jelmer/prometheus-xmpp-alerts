@@ -10,7 +10,7 @@ setup(name='prometheus-xmpp-alerts',
       author_email="jelmer@jelmer.uk",
       url="https://jelmer.uk/code/prometheus-xmpp-alerts",
       description="Prometheus XMPP Alerts hook",
-      version='0.4.2',
+      version='0.4.2.1',
       license='Apachev2',
       project_urls={
           "Bug Tracker":
