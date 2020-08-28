@@ -182,12 +182,12 @@ async def serve_alert(request):
                     mto=to_jid,
                     mbody=text,
                     mtype='chat')
-            return web.Response(body='Sent message')
             last_alert_message_succeeded_gauge.set(1)
+            return web.Response(body='Sent message')
         except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
-            return web.Response(body='Did not send message.  Not online: %s' % e)
             logging.warning('Alert posted but we are not online: %s', e)
             last_alert_message_succeeded_gauge.set(0)
+            return web.Response(body='Did not send message.  Not online: %s' % e)
     except Exception:
         last_alert_message_succeeded_gauge.set(0)
         raise
