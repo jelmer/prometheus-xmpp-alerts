@@ -28,11 +28,11 @@ def parse_timestring(ts):
 
 def create_message_short(message):
     """Create the short form message to deliver."""
-    try:
-        summary = alert['annotations']['summary']
-    except KeyError:
-        summary = alert['labels']['alertname']
     for alert in message['alerts']:
+        try:
+            summary = alert['annotations']['summary']
+        except KeyError:
+            summary = alert['labels']['alertname']
         yield '%s, %s, %s' % (
             alert['status'].upper(),
             parse_timestring(alert['startsAt']).isoformat(timespec='seconds'),
