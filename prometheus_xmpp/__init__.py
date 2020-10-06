@@ -73,6 +73,6 @@ def run_amtool(args):
     # TODO(jelmer): Support setting the current user, e.g. for silence
     # ownership.
     ret = subprocess.run(
-        ["/usr/bin/amtool"] + args, shell=False, universal_newlines=True,
+        ["amtool"] + args, shell=False, universal_newlines=True,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     return ret.stdout
