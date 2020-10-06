@@ -155,14 +155,14 @@ app.connect()
 async def serve_test(request):
     to_jid = request.match_info.get('to_jid', config['to_jid'])
     test_counter.inc()
-    id_ = app.send_message(
+    try:
+        id_ = app.send_message(
             mto=to_jid,
             mbody='Test message',
             mtype='chat')
-    try:
         return web.Response(body='Sent message.')
-    except slixmpp.xmlstream.xmlstream.NotConnectedError:
-        return web.Response(body='Did not send message.  Not online.')
+    except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
+        return web.Response(body='Did not send message.  Not online: %s' % e)
 
 
 async def serve_alert(request):
