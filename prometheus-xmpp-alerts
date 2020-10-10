@@ -23,6 +23,7 @@ import yaml
 from aiohttp import web
 from prometheus_client import (
     Counter,
+    Gauge,
     generate_latest,
     CONTENT_TYPE_LATEST,
 )
@@ -40,6 +41,10 @@ alert_counter = Counter('alert_count', 'Total number of alerts delivered')
 test_counter = Counter('test_count', 'Total number of test alerts delivered')
 xmpp_message_counter = Counter(
     'xmpp_message_count', 'Total number of XMPP messages received.')
+online_gauge = Gauge(
+    'xmpp_online', 'Connected to XMPP server.')
+last_alert_message_succeeded_gauge = Gauge(
+    'last_alert_message_succeeded', 'Last alert message succeeded.')
 
 
 def read_password_from_command(cmd):
@@ -80,10 +85,14 @@ class XmppApp(slixmpp.ClientXMPP):
         Args:
           event: Event data (empty)
         """
+        logging.info("Session started.")
         self.send_presence(ptype='available', pstatus='Active')
         self.get_roster()
+        online_gauge.set(1)
+        last_alert_message_succeeded_gauge.set(1)
 
     def lost(self, event):
+        online_gauge.set(0)
         logging.info("Connection lost, exiting.")
         sys.exit(1)
 
@@ -144,11 +153,16 @@ app.connect()
 async def serve_test(request):
     to_jid = request.match_info.get('to_jid', config['to_jid'])
     test_counter.inc()
-    id_ = app.send_message(
+    try:
+        app.send_message(
             mto=to_jid,
             mbody='Test message',
             mtype='chat')
-    return web.Response(body='Sent message.')
+    except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
+        return web.Response(
+            body='Did not send message. Not online: %s' % e)
+    else:
+        return web.Response(body='Sent message.')
 
 
 async def serve_alert(request):
@@ -158,15 +172,27 @@ async def serve_alert(request):
         alert = await request.json()
     except json.decoder.JSONDecodeError as e:
         raise web.HTTPUnprocessableEntity(str(e))
-    if 'format' in config and config['format'] == 'full':
-        text = '\n--\n'.join(create_message_full(alert))
-    else:
-        text = '\n'.join(create_message_short(alert))
-    id_ = app.send_message(
-            mto=to_jid,
-            mbody=text,
-            mtype='chat')
-    return web.Response(body='Sent message')
+    try:
+        if 'format' in config and config['format'] == 'full':
+            text = '\n--\n'.join(create_message_full(alert))
+        else:
+            text = '\n'.join(create_message_short(alert))
+        try:
+            app.send_message(
+                    mto=to_jid,
+                    mbody=text,
+                    mtype='chat')
+        except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
+            logging.warning('Alert posted but we are not online: %s', e)
+            last_alert_message_succeeded_gauge.set(0)
+            return web.Response(
+                body='Did not send message. Not online: %s' % e)
+        else:
+            last_alert_message_succeeded_gauge.set(1)
+            return web.Response(body='Sent message')
+    except Exception:
+        last_alert_message_succeeded_gauge.set(0)
+        raise
 
 
 async def serve_metrics(request):
