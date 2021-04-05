@@ -111,7 +111,7 @@ class XmppApp(slixmpp.ClientXMPP):
                 args[0] = args[0].lower()
                 if msg['from'].bare in self._amtool_allowed:
                     if self.alertmanager_url:
-                        args = [ '--alertmanager.url', self.alertmanager_url ] + args
+                        args = ['--alertmanager.url', self.alertmanager_url] + args
                     response = run_amtool(args)
                 else:
                     response = "Unauthorized JID."
