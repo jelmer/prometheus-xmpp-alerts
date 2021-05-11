@@ -12,6 +12,7 @@ RUN pip install \
   prometheus_client
 
 FROM python:3.7-alpine
+LABEL maintainer="jelmer@jelmer.uk"
 
 COPY --from=build-env /usr/local/lib/python3.7/site-packages/ /usr/local/lib/python3.7/site-packages/
 
