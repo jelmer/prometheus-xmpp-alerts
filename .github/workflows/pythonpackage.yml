@@ -20,7 +20,6 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt build-dep python3-slixmpp
         python -m pip install --upgrade pip
         python setup.py develop
     - name: Style checks
