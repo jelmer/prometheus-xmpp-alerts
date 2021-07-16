@@ -21,6 +21,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        sudo apt install libidn-dev
         python -m pip install --upgrade pip
         pip install setuptools wheel twine
     - name: Build and publish

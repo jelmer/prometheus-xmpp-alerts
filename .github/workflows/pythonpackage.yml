@@ -20,6 +20,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        sudo apt install libidn-dev
         python -m pip install --upgrade pip
         python setup.py develop
     - name: Style checks
