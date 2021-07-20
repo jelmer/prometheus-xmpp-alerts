@@ -39,7 +39,7 @@ Docker file
 -----------
 
 You can build your own docker images using the Dockerfile in this directory, or
-use jvernooij/prometheus-xmpp-alerts on dockerhub.
+use ``ghcr.io/jelmer/prometheus-xmpp-alerts``.
 
 Password Command
 ----------------
