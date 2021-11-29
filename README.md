@@ -39,7 +39,8 @@ Docker file
 -----------
 
 You can build your own docker images using the Dockerfile in this directory, or
-use ``ghcr.io/jelmer/prometheus-xmpp-alerts``.
+use ``ghcr.io/jelmer/prometheus-xmpp-alerts``. Provide your configuration in
+``/config.yaml``.
 
 Password Command
 ----------------

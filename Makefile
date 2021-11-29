@@ -12,5 +12,4 @@ flake8:
 
 docker:
 	docker build -t jvernooij/prometheus-xmpp-alerts -t ghcr.io/jelmer/prometheus-xmpp-alerts .
-	docker push jvernooij/prometheus-xmpp-alerts
 	docker push ghcr.io/jelmer/prometheus-xmpp-alerts
