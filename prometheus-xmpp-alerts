@@ -62,11 +62,10 @@ def read_password_from_command(cmd):
 
 class XmppApp(slixmpp.ClientXMPP):
 
-    def __init__(self, jid, password, password_command=None,
+    def __init__(self, jid, password_cb,
                  amtool_allowed=None, alertmanager_url=None):
 
-        if password_command:
-            password = read_password_from_command(password_command)
+        password = password_cb()
 
         slixmpp.ClientXMPP.__init__(self, jid, password)
         self._amtool_allowed = amtool_allowed or []
@@ -148,7 +147,14 @@ with open(args.config_path) as f:
 hostname = socket.gethostname()
 jid = "{}/{}".format(config['jid'], hostname)
 
-app = XmppApp(jid, config.get('password'), config.get('password_command'),
+if config.get('password'):
+    password_cb = lambda: password
+elif config.get('password_command'):
+    password_cb = lambda: read_password_from_command(config['password_command'])
+else:
+    password_cb = lambda: None
+
+app = XmppApp(jid, password_cb,
               config.get('amtool_allowed', [config['to_jid']]),
               config.get('alertmanager_url', None))
 app.connect()
@@ -163,6 +169,7 @@ async def serve_test(request):
             mbody='Test message',
             mtype='chat')
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
+        logging.warning('Test alert not posted since we are not online: %s', e)
         return web.Response(
             body='Did not send message. Not online: %s' % e)
     else:
