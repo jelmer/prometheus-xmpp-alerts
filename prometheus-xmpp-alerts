@@ -148,7 +148,7 @@ hostname = socket.gethostname()
 jid = "{}/{}".format(config['jid'], hostname)
 
 if config.get('password'):
-    password_cb = lambda: password
+    password_cb = lambda: config['password']
 elif config.get('password_command'):
     password_cb = lambda: read_password_from_command(config['password_command'])
 else:
