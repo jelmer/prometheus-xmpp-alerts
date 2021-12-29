@@ -149,11 +149,14 @@ hostname = socket.gethostname()
 jid = "{}/{}".format(config['jid'], hostname)
 
 if config.get('password'):
-    password_cb = lambda: config['password']
+    def password_cb():
+        return config['password']
 elif config.get('password_command'):
-    password_cb = lambda: read_password_from_command(config['password_command'])
+    def password_cb():
+        return read_password_from_command(config['password_command'])
 else:
-    password_cb = lambda: None
+    def password_cb():
+        return None
 
 xmpp_app = XmppApp(
     jid, password_cb,
@@ -165,7 +168,7 @@ async def serve_test(request):
     to_jid = request.match_info.get('to_jid', config['to_jid'])
     test_counter.inc()
     try:
-        app.send_message(
+        xmpp_app.send_message(
             mto=to_jid,
             mbody='Test message',
             mtype='chat')
@@ -190,7 +193,7 @@ async def serve_alert(request):
         else:
             text = '\n'.join(create_message_short(alert))
         try:
-            app.send_message(
+            xmpp_app.send_message(
                     mto=to_jid,
                     mbody=text,
                     mtype='chat')
@@ -239,4 +242,6 @@ web_app.add_routes([
 ])
 
 xmpp_app.connect()
-web.run_app(web_app, host=config['listen_address'], port=config['listen_port'], loop=xmpp_app.loop)
+web.run_app(
+    web_app, host=config['listen_address'], port=config['listen_port'],
+    loop=xmpp_app.loop)
