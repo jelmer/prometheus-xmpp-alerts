@@ -16,6 +16,8 @@ LABEL maintainer="jelmer@jelmer.uk"
 
 COPY --from=build-env /usr/local/lib/python3.7/site-packages/ /usr/local/lib/python3.7/site-packages/
 
+RUN apk add --no-cache alertmanager
+
 ADD ./prometheus-xmpp-alerts /prometheus-xmpp-alerts
 ADD ./prometheus_xmpp /prometheus_xmpp
 
