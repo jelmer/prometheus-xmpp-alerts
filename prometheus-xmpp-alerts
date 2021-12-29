@@ -110,7 +110,8 @@ class XmppApp(slixmpp.ClientXMPP):
                 args[0] = args[0].lower()
                 if msg['from'].bare in self._amtool_allowed:
                     if self.alertmanager_url:
-                        args = ['--alertmanager.url', self.alertmanager_url] + args
+                        args = [
+                            '--alertmanager.url', self.alertmanager_url] + args
                     response = run_amtool(args)
                 else:
                     response = "Unauthorized JID."
@@ -182,7 +183,7 @@ async def serve_alert(request):
     try:
         alert = await request.json()
     except json.decoder.JSONDecodeError as e:
-        raise web.HTTPUnprocessableEntity(str(e))
+        raise web.HTTPUnprocessableEntity(text=str(e))
     try:
         if 'format' in config and config['format'] == 'full':
             text = '\n--\n'.join(create_message_full(alert))
