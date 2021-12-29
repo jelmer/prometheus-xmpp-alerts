@@ -155,10 +155,10 @@ elif config.get('password_command'):
 else:
     password_cb = lambda: None
 
-app = XmppApp(jid, password_cb,
-              config.get('amtool_allowed', [config['to_jid']]),
-              config.get('alertmanager_url', None))
-app.connect()
+xmpp_app = XmppApp(
+    jid, password_cb,
+    config.get('amtool_allowed', [config['to_jid']]),
+    config.get('alertmanager_url', None))
 
 
 async def serve_test(request):
@@ -213,8 +213,14 @@ async def serve_metrics(request):
     return resp
 
 
+async def serve_health(request):
+    if not xmpp_app.authenticated:
+        return web.Response(status=500, text='not authenticated to server')
+    return web.Response(body=b'ok')
+
+
 async def serve_root(request):
-    return web.Response(body='See /test, /alert or /metrics')
+    return web.Response(body='See /test, /health, /alert or /metrics')
 
 
 web_app = web.Application()
@@ -229,6 +235,8 @@ web_app.add_routes([
     web.post('/alert', serve_alert),
     web.post('/alert/{to_jid}', serve_alert),
     web.get('/metrics', serve_metrics),
+    web.get('/health', serve_health),
 ])
 
-web.run_app(web_app, host=config['listen_address'], port=config['listen_port'])
+xmpp_app.connect()
+web.run_app(web_app, host=config['listen_address'], port=config['listen_port'], loop=xmpp_app.loop)
