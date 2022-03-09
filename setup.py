@@ -33,6 +33,7 @@ setup(name='prometheus-xmpp-alerts',
       install_requires=[
           'slixmpp',
           'aiohttp',
+          'pytz',
           'pyyaml',
           'prometheus_client',
       ],
