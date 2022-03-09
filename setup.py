@@ -37,5 +37,5 @@ setup(name='prometheus-xmpp-alerts',
           'pyyaml',
           'prometheus_client',
       ],
-      test_requires=['pytz'],
+      tests_require=['pytz'],
       )
