@@ -28,7 +28,7 @@ jobs:
         python -m flake8
     - name: Typing checks
       run: |
-        pip install -U mypy
+        pip install -U mypy types-pytz
         python -m mypy prometheus_xmpp
     - name: Test suite run
       run: |
