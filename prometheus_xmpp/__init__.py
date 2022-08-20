@@ -16,7 +16,7 @@ from datetime import datetime
 import subprocess
 
 
-__version__ = (0, 5, 4)
+__version__ = (0, 5, 5)
 version_string = '.'.join(map(str, __version__))
 
 
