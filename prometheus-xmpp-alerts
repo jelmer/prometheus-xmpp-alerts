@@ -21,11 +21,10 @@ import sys
 import slixmpp
 import yaml
 from aiohttp import web
-from prometheus_client import (
+from aiohttp_openmetrics import (
     Counter,
     Gauge,
-    generate_latest,
-    CONTENT_TYPE_LATEST,
+    metrics as serve_metrics,
 )
 
 from prometheus_xmpp import (
@@ -212,12 +211,6 @@ async def serve_alert(request):
     except Exception:
         last_alert_message_succeeded_gauge.set(0)
         raise
-
-
-async def serve_metrics(request):
-    resp = web.Response(body=generate_latest())
-    resp.content_type = CONTENT_TYPE_LATEST
-    return resp
 
 
 async def serve_health(request):

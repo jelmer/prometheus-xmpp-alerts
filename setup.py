@@ -35,7 +35,7 @@ setup(name='prometheus-xmpp-alerts',
           'aiohttp',
           'pytz',
           'pyyaml',
-          'prometheus_client',
+          'aiohttp_openmetrics',
       ],
       tests_require=['pytz'],
       )
