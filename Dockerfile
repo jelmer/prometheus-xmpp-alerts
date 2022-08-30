@@ -1,28 +1,11 @@
-FROM python:3.9-alpine AS build-env
-
-RUN apk add --no-cache \
-  gcc \
-  musl-dev \
-  libffi-dev
-
-RUN pip install \
-  slixmpp \
-  aiohttp \
-  pyyaml \
-  prometheus_client
-
-FROM python:3.9-alpine
+FROM debian:sid-slim
 LABEL maintainer="jelmer@jelmer.uk"
 
-COPY --from=build-env /usr/local/lib/python3.9/site-packages/ /usr/local/lib/python3.9/site-packages/
+RUN apt -y update && apt --no-install-recommends -y install python3-slixmpp python3-aiohttp python3-yaml python3-aiohttp-openmetrics prometheus-alertmanager
 
-RUN apk add --no-cache alertmanager
-
-ADD ./prometheus-xmpp-alerts /prometheus-xmpp-alerts
-ADD ./prometheus_xmpp /prometheus_xmpp
-
-RUN sed -i 's/yaml.load(f)/yaml.load(f, Loader=yaml.FullLoader)/' /prometheus-xmpp-alerts
+COPY ./prometheus-xmpp-alerts /prometheus-xmpp-alerts
+COPY ./prometheus_xmpp /prometheus_xmpp
 
 EXPOSE 9199
 
-CMD ["/usr/local/bin/python", "/prometheus-xmpp-alerts", "--config", "/config.yaml"]
+CMD ["/usr/bin/python3", "/prometheus-xmpp-alerts", "--config", "/config.yaml"]
