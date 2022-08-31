@@ -11,5 +11,6 @@ flake8:
 .PHONY: all flake8 check
 
 docker:
-	docker build -t jvernooij/prometheus-xmpp-alerts -t ghcr.io/jelmer/prometheus-xmpp-alerts .
-	docker push ghcr.io/jelmer/prometheus-xmpp-alerts
+	buildah build -t docker.io/jvernooij/prometheus-xmpp-alerts -t ghcr.io/jelmer/prometheus-xmpp-alerts .
+	buildah push docker.io/jvernooij/prometheus-xmpp-alerts
+	buildah push ghcr.io/jelmer/prometheus-xmpp-alerts
