@@ -20,7 +20,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip pyasn1
+        python -m pip install --upgrade pip pyasn1 aiohttp
         python setup.py develop
     - name: Style checks
       run: |
