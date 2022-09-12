@@ -1,4 +1,4 @@
-prometheus-xmpp-alerts (0.5.3-1) UNRELEASED; urgency=medium
+prometheus-xmpp-alerts (0.5.3-1) unstable; urgency=medium
 
   * Bump debhelper from old 12 to 13.
   * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
@@ -11,7 +11,7 @@ prometheus-xmpp-alerts (0.5.3-1) UNRELEASED; urgency=medium
   * New upstream release.
    + Fixes datetime parsing. Closes: #1019414
 
- -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 12 Sep 2022 15:26:21 -0000
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 12 Sep 2022 15:27:07 +0100
 
 prometheus-xmpp-alerts (0.4.2-1) unstable; urgency=medium
 
