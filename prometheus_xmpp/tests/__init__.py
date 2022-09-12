@@ -3,6 +3,7 @@
 #
 
 from datetime import datetime
+import pytz
 import unittest
 
 from prometheus_xmpp import \
@@ -49,7 +50,7 @@ class CreateMessageTests(unittest.TestCase):
 
     def test_create_message_short(self):
         self.assertEqual(
-            ['FIRING, 2019-04-12T23:20:50, Test Alert'],
+            ['FIRING, 2019-04-12T23:20:50+00:00, Test Alert'],
             list(create_message_short(self.message)))
 
     def test_create_message_full(self):
@@ -65,15 +66,18 @@ class ParseTimestringTests(unittest.TestCase):
 
     def test_parse_with_nanoseconds(self):
         self.assertEqual(
-            datetime.strptime(
-                '2019-04-27T05:33:35.739602Z', '%Y-%m-%dT%H:%M:%S.%fZ'),
+            datetime(2019, 4, 27, 5, 33, 35, 739602, pytz.utc),
             parse_timestring('2019-04-27T05:33:35.739602132Z'))
 
     def test_parse_with_microseconds(self):
         self.assertEqual(
-            datetime.strptime(
-                '2019-04-27T05:33:35.739602Z', '%Y-%m-%dT%H:%M:%S.%fZ'),
+            datetime(2019, 4, 27, 5, 33, 35, 739602, pytz.utc),
             parse_timestring('2019-04-27T05:33:35.739602Z'))
+
+    def test_parse_with_timezone(self):
+        self.assertEqual(
+            datetime(2019, 4, 27, 5, 33, 35, 739602, pytz.utc),
+            parse_timestring('2019-04-27T05:33:35.739602+00:00'))
 
 
 def test_suite():

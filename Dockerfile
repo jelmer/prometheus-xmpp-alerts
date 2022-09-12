@@ -12,16 +12,17 @@ RUN pip install \
   prometheus_client
 
 FROM python:3.7-alpine
+LABEL maintainer="jelmer@jelmer.uk"
 
 COPY --from=build-env /usr/local/lib/python3.7/site-packages/ /usr/local/lib/python3.7/site-packages/
 
+RUN apk add --no-cache alertmanager
+
 ADD ./prometheus-xmpp-alerts /prometheus-xmpp-alerts
 ADD ./prometheus_xmpp /prometheus_xmpp
-ADD ./xmpp-alerts.yml.example /etc/prometheus/xmpp-alerts.yml
 
-RUN sed -i 's/127.0.0.1/0.0.0.0/' /etc/prometheus/xmpp-alerts.yml
 RUN sed -i 's/yaml.load(f)/yaml.load(f, Loader=yaml.FullLoader)/' /prometheus-xmpp-alerts
 
 EXPOSE 9199
 
-CMD ["/usr/local/bin/python", "/prometheus-xmpp-alerts", "--config", "/etc/prometheus/xmpp-alerts.yml"]
+CMD ["/usr/local/bin/python", "/prometheus-xmpp-alerts", "--config", "/config.yaml"]

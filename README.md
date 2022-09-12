@@ -35,6 +35,20 @@ $ python3 prometheus-xmpp-alerts
 If you have [amtool](https://github.com/prometheus/alertmanager#amtool) set up,
 then you can also allow ``to_jid`` to see existing alerts and manage silences.
 
+Docker file
+-----------
+
+You can build your own docker images using the Dockerfile in this directory, or
+use ``ghcr.io/jelmer/prometheus-xmpp-alerts``. Provide your configuration in
+``/config.yaml``.
+
+Password Command
+----------------
+
+Instead of hardcoding your password, you can also use a `password_command`. The
+command should write the password to stdout. Only the first line (stripped of
+whitespaces) is being used as password.
+
 Message Format
 --------------
 

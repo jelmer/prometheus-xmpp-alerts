@@ -16,23 +16,27 @@ from datetime import datetime
 import subprocess
 
 
-__version__ = (0, 3, 2)
+__version__ = (0, 5, 2)
 version_string = '.'.join(map(str, __version__))
 
 
 def parse_timestring(ts):
     # strptime doesn't understand nanoseconds, so discard the last three digits
-    ts = re.sub('\\.([0-9]{6})([0-9]{0,3})Z$', r'.\1Z', ts)
-    return datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S.%fZ')
+    ts = re.sub(r'\.([0-9]{6})([0-9]*)([^0-9])', r'.\1\3', ts)
+    return datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S.%f%z')
 
 
 def create_message_short(message):
     """Create the short form message to deliver."""
     for alert in message['alerts']:
+        try:
+            summary = alert['annotations']['summary']
+        except KeyError:
+            summary = alert['labels']['alertname']
         yield '%s, %s, %s' % (
             alert['status'].upper(),
             parse_timestring(alert['startsAt']).isoformat(timespec='seconds'),
-            alert['annotations']['summary'])
+            summary)
 
 
 def create_message_full(message):
@@ -52,9 +56,13 @@ def create_message_full(message):
             for label, value in alert['labels'].items():
                 labels += '\n*{}:* {}'.format(label, value)
 
+        try:
+            summary = alert['annotations']['summary']
+        except KeyError:
+            summary = alert['labels']['alertname']
         yield '*[{}] {}*{}{}{}'.format(
             alert['status'].upper(),
-            alert['annotations']['summary'],
+            summary,
             group_labels,
             description,
             labels)
@@ -65,6 +73,6 @@ def run_amtool(args):
     # TODO(jelmer): Support setting the current user, e.g. for silence
     # ownership.
     ret = subprocess.run(
-        ["/usr/bin/amtool"] + args, shell=False, text=True,
-        stdout=subprocess.PIPE)
+        ["amtool"] + args, shell=False, universal_newlines=True,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     return ret.stdout
