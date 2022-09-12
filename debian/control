@@ -9,7 +9,7 @@ Build-Depends:
                python3-aiohttp,
                python3-yaml,
                python3-prometheus-client,
-               debhelper-compat (= 12)
+               debhelper-compat (= 13)
 Maintainer: Jelmer Vernooĳ <jelmer@debian.org>
 Standards-Version: 4.4.0
 Testsuite: autopkgtest-pkg-python
