@@ -1,3 +1,6 @@
-Repository: https://github.com/jelmer/prometheus-xmpp-alerts
+Bug-Database: https://github.com/jelmer/prometheus-xmpp-alerts/issues
+Bug-Submit: https://github.com/jelmer/prometheus-xmpp-alerts/issues/new
+Repository: https://github.com/jelmer/prometheus-xmpp-alerts.git
 Name: prometheus-xmpp-alerts
 Contact: Jelmer Vernooĳ <jelmer@jelmer.uk>
+Repository-Browse: https://github.com/jelmer/prometheus-xmpp-alerts

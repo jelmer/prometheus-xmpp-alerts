@@ -1,6 +1,8 @@
 prometheus-xmpp-alerts (0.4.2-2) UNRELEASED; urgency=medium
 
   * Bump debhelper from old 12 to 13.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
 
  -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 12 Sep 2022 15:24:06 -0000
 
