@@ -6,6 +6,8 @@ prometheus-xmpp-alerts (0.4.2-2) UNRELEASED; urgency=medium
   * Remove obsolete fields Contact, Name from debian/upstream/metadata (already
     present in machine-readable debian/copyright).
   * Update standards version to 4.6.1, no changes needed.
+  * Update pattern for GitHub archive URLs from /<org>/<repo>/tags
+    page/<org>/<repo>/archive/<tag> -> /<org>/<repo>/archive/refs/tags/<tag>.
 
  -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 12 Sep 2022 15:24:06 -0000
 
