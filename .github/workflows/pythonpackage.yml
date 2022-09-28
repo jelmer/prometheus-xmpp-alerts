@@ -25,11 +25,11 @@ jobs:
     - name: Style checks
       run: |
         python -m pip install flake8
-        python -m flake8 prometheus_xmpp prometheus-xmpp-alerts
+        python -m flake8 prometheus_xmpp
     - name: Typing checks
       run: |
         pip install -U mypy types-pytz types-jinja2 types-PyYAML
-        python -m mypy --ignore-missing-imports prometheus_xmpp prometheus-xmpp-alerts
+        python -m mypy --ignore-missing-imports prometheus_xmpp
     - name: Test suite run
       run: |
         python -m unittest prometheus_xmpp.tests.test_suite

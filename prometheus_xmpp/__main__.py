@@ -187,49 +187,8 @@ class XmppApp(slixmpp.ClientXMPP):
             msg.reply(response).send()
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--config', dest='config_path',
-                    type=str, default=DEFAULT_CONF_PATH,
-                    help='Path to configuration file.')
-parser.add_argument("-q", "--quiet", help="set logging to ERROR",
-                    action="store_const", dest="loglevel",
-                    const=logging.ERROR, default=logging.INFO)
-parser.add_argument("-d", "--debug", help="set logging to DEBUG",
-                    action="store_const", dest="loglevel",
-                    const=logging.DEBUG, default=logging.INFO)
-
-args = parser.parse_args()
-
-# Setup logging.
-logging.basicConfig(level=args.loglevel, format='%(levelname)-8s %(message)s')
-
-with open(args.config_path) as f:
-    if getattr(yaml, 'FullLoader', None):
-        config = yaml.load(f, Loader=yaml.FullLoader)  # type: ignore
-    else:
-        # Backwards compatibility with older versions of Python
-        config = yaml.load(f)  # type: ignore
-
-hostname = socket.gethostname()
-jid = "{}/{}".format(config['jid'], hostname)
-
-if config.get('password'):
-    def password_cb():
-        return config['password']
-elif config.get('password_command'):
-    def password_cb():
-        return read_password_from_command(config['password_command'])
-else:
-    def password_cb():
-        return None
-
-xmpp_app = XmppApp(
-    jid, password_cb,
-    config.get('amtool_allowed', [config['to_jid']]),
-    config.get('alertmanager_url', None))
-
-
 async def serve_test(request):
+    xmpp_app = request.app['xmpp_app']
     to_jid = request.match_info.get('to_jid', request.app['config']['to_jid'])
     test_counter.inc()
     try:
@@ -271,6 +230,8 @@ async def render_alert(config, alert):
 
 
 async def serve_alert(request):
+    config = request.app['config']
+    xmpp_app = request.app['xmpp_app']
     to_jid = request.match_info.get('to_jid', config['to_jid'])
     alert_counter.inc()
     try:
@@ -305,7 +266,7 @@ async def serve_alert(request):
 
 
 async def serve_health(request):
-    if not xmpp_app.authenticated:
+    if not request.app['xmpp_app'].authenticated:
         return web.Response(status=500, text='not authenticated to server')
     return web.Response(body=b'ok')
 
@@ -314,23 +275,71 @@ async def serve_root(request):
     return web.Response(body='See /test, /health, /alert or /metrics')
 
 
-web_app = web.Application()
-web_app['config'] = config
-web_app.add_routes([
-    web.get('/', serve_root),
-    web.get('/test', serve_test),
-    web.get('/test/{to_jid}', serve_test),
-    web.post('/test', serve_test),
-    web.post('/test/{to_jid}', serve_test),
-    web.get('/alert', serve_alert),
-    web.get('/alert/{to_jid}', serve_alert),
-    web.post('/alert', serve_alert),
-    web.post('/alert/{to_jid}', serve_alert),
-    web.get('/metrics', serve_metrics),
-    web.get('/health', serve_health),
-])
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', dest='config_path',
+                        type=str, default=DEFAULT_CONF_PATH,
+                        help='Path to configuration file.')
+    parser.add_argument("-q", "--quiet", help="set logging to ERROR",
+                        action="store_const", dest="loglevel",
+                        const=logging.ERROR, default=logging.INFO)
+    parser.add_argument("-d", "--debug", help="set logging to DEBUG",
+                        action="store_const", dest="loglevel",
+                        const=logging.DEBUG, default=logging.INFO)
 
-xmpp_app.connect()
-web.run_app(
-    web_app, host=config['listen_address'], port=config['listen_port'],
-    loop=xmpp_app.loop)
+    args = parser.parse_args()
+
+    # Setup logging.
+    logging.basicConfig(
+        level=args.loglevel, format='%(levelname)-8s %(message)s')
+
+    with open(args.config_path) as f:
+        if getattr(yaml, 'FullLoader', None):
+            config = yaml.load(f, Loader=yaml.FullLoader)  # type: ignore
+        else:
+            # Backwards compatibility with older versions of Python
+            config = yaml.load(f)  # type: ignore
+
+    hostname = socket.gethostname()
+    jid = "{}/{}".format(config['jid'], hostname)
+
+    if config.get('password'):
+        def password_cb():
+            return config['password']
+    elif config.get('password_command'):
+        def password_cb():
+            return read_password_from_command(config['password_command'])
+    else:
+        def password_cb():
+            return None
+
+    xmpp_app = XmppApp(
+        jid, password_cb,
+        config.get('amtool_allowed', [config['to_jid']]),
+        config.get('alertmanager_url', None))
+
+    web_app = web.Application()
+    web_app['config'] = config
+    web_app['xmpp_app'] = xmpp_app
+    web_app.add_routes([
+        web.get('/', serve_root),
+        web.get('/test', serve_test),
+        web.get('/test/{to_jid}', serve_test),
+        web.post('/test', serve_test),
+        web.post('/test/{to_jid}', serve_test),
+        web.get('/alert', serve_alert),
+        web.get('/alert/{to_jid}', serve_alert),
+        web.post('/alert', serve_alert),
+        web.post('/alert/{to_jid}', serve_alert),
+        web.get('/metrics', serve_metrics),
+        web.get('/health', serve_health),
+    ])
+
+    xmpp_app.connect()
+    web.run_app(
+        web_app, host=config['listen_address'], port=config['listen_port'],
+        loop=xmpp_app.loop)
+
+
+if __name__ == '__main__':
+    main()
