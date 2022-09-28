@@ -29,7 +29,7 @@ format: 'short'
 And run the web hook::
 
 ```shell
-$ python3 prometheus-xmpp-alerts
+$ python3 -m prometheus_xmpp
 ```
 
 If you have [amtool](https://github.com/prometheus/alertmanager#amtool) set up,

@@ -20,7 +20,6 @@ setup(name='prometheus-xmpp-alerts',
       },
       keywords="prometheus xmpp jabber",
       packages=['prometheus_xmpp'],
-      scripts=['prometheus-xmpp-alerts'],
       classifiers=[
           'Development Status :: 3 - Alpha',
           'License :: OSI Approved :: Apache Software License',
@@ -42,4 +41,8 @@ setup(name='prometheus-xmpp-alerts',
           'bs4',
       ],
       tests_require=['pytz'],
+      entry_points={
+          "console_scripts": [
+              "prometheus-xmpp-alerts=prometheus_xmpp_alerts:main"]
+      },
       )
