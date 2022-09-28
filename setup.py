@@ -38,6 +38,8 @@ setup(name='prometheus-xmpp-alerts',
           'pytz',
           'pyyaml',
           'aiohttp_openmetrics',
+          'jinja2',
+          'bs4',
       ],
       tests_require=['pytz'],
       )
