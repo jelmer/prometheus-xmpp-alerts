@@ -17,6 +17,7 @@ import logging
 import shlex
 import socket
 import sys
+import traceback
 
 import slixmpp
 import yaml
@@ -30,11 +31,71 @@ from aiohttp_openmetrics import (
 from prometheus_xmpp import (
     create_message_short,
     create_message_full,
+    render_text_template,
+    render_html_template,
     run_amtool,
+    strip_html_tags,
 )
 
 
 DEFAULT_CONF_PATH = '/etc/prometheus/xmpp-alerts.yml'
+
+
+DEFAULT_HTML_TEMPLATE = """\
+{% macro color(severity) -%}
+{% if severity == 'warning' -%}#ffc107
+{% elif severity == 'none' -%}#17a2b8
+{% else -%}#dc3545
+{% endif -%}
+{% endmacro -%}
+{% if status == 'firing' %}
+<strong>\
+<span style="color:{{ color(labels.severity) }}">FIRING:</span></strong>
+{% elif status == 'resolved' %}
+<strong>span style="color:#33cc33">RESOLVED:</span></strong>
+{% else %}
+{{ status.upper() }}:
+{% endif %}
+{% if labels.alertname %}<i>{{ labels.alertname }}</i>{% endif %}
+{% if labels.host or labels.instance %}\
+at {{ labels.host or labels.instance }}{% endif %}
+{% if annotations.message %}<br/>\
+{{ annotations.message.replace("\\n", "<br/>") }}{% endif %}
+{% if annotations.description %}<br/>{{ annotations.description }}{% endif %}
+<br/><a href="{{ generatorURL }}">Alert link</a>
+"""
+
+DEFAULT_TEXT_TEMPLATE = """\
+{{ status.upper() }}:\
+{% if labels.alertname %}*{{ labels.alertname }}*{% endif %}\
+{% if labels.host or labels.instance %}\
+at {{ labels.host or labels.instance }}{% endif %}\
+{% if annotations.message %}
+{{ annotations.message }}{% endif %}
+{% if annotations.description %}
+{{ annotations.description }}{% endif %}
+
+Link: {{ generatorURL }}
+"""
+
+
+EXAMPLE_ALERT = {
+  "status": "firing",
+  "labels": {
+    "alertname": "Test",
+    "instance": "localhost:1337",
+  },
+  "annotations": {
+    "description": (
+        "normally there would be details\n"
+        "in this multi-line description"),
+    "summary": "summary for a test alert",
+  },
+  "startsAt": "2022-08-01T09:52:26.739266927+01:00",
+  "endsAt": "0001-01-01T00:00:00Z",
+  "generatorURL": "http://example.com:9090/graph?g0.expr=someexpr"
+}
+
 
 alert_counter = Counter('alert_count', 'Total number of alerts delivered')
 test_counter = Counter('test_count', 'Total number of test alerts delivered')
@@ -74,6 +135,7 @@ class XmppApp(slixmpp.ClientXMPP):
         self.add_event_handler("message", self.message)
         self.add_event_handler("disconnected", self.lost)
         self.add_event_handler("failed_auth", self.failed_auth)
+        self.register_plugin('xep_0071')  # XHTML-IM
         self.register_plugin('xep_0030')  # Service Discovery
         self.register_plugin('xep_0004')  # Data Forms
         self.register_plugin('xep_0060')  # PubSub
@@ -143,10 +205,10 @@ logging.basicConfig(level=args.loglevel, format='%(levelname)-8s %(message)s')
 
 with open(args.config_path) as f:
     if getattr(yaml, 'FullLoader', None):
-        config = yaml.load(f, Loader=yaml.FullLoader)
+        config = yaml.load(f, Loader=yaml.FullLoader)  # type: ignore
     else:
         # Backwards compatibility with older versions of Python
-        config = yaml.load(f)
+        config = yaml.load(f)  # type: ignore
 
 hostname = socket.gethostname()
 jid = "{}/{}".format(config['jid'], hostname)
@@ -168,12 +230,14 @@ xmpp_app = XmppApp(
 
 
 async def serve_test(request):
-    to_jid = request.match_info.get('to_jid', config['to_jid'])
+    to_jid = request.match_info.get('to_jid', request.app['config']['to_jid'])
     test_counter.inc()
     try:
+        text, html = await render_alert(request.app['config'], EXAMPLE_ALERT)
         xmpp_app.send_message(
             mto=to_jid,
-            mbody='Test message',
+            mbody=text,
+            mhtml=html,
             mtype='chat')
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
         logging.warning('Test alert not posted since we are not online: %s', e)
@@ -183,34 +247,61 @@ async def serve_test(request):
         return web.Response(body='Sent message.')
 
 
+async def render_alert(config, alert):
+    # format is here just for backwards compatibility
+    if 'format' in config and config['format'] == 'full':
+        text = '\n--\n'.join(create_message_full(alert))
+        html = None
+    elif 'format' in config and config['format'] == 'short':
+        text = '\n'.join(create_message_short(alert))
+        html = None
+    elif 'html_template' in config:
+        html = render_html_template(config['html_template'], alert)
+        if 'text_template' in config:
+            text = render_text_template(config['text_template'], alert)
+        else:
+            text = strip_html_tags(html)
+    elif 'text_template' in config:
+        text = render_text_template(config['text_template'], alert)
+        html = None
+    else:
+        text = render_text_template(DEFAULT_TEXT_TEMPLATE, alert)
+        html = render_html_template(DEFAULT_HTML_TEMPLATE, alert)
+    return text, html
+
+
 async def serve_alert(request):
     to_jid = request.match_info.get('to_jid', config['to_jid'])
     alert_counter.inc()
     try:
-        alert = await request.json()
+        payload = await request.json()
     except json.decoder.JSONDecodeError as e:
         raise web.HTTPUnprocessableEntity(text=str(e))
-    try:
-        if 'format' in config and config['format'] == 'full':
-            text = '\n--\n'.join(create_message_full(alert))
-        else:
-            text = '\n'.join(create_message_short(alert))
+    sent = 0
+    for alert in payload['alerts']:
         try:
-            xmpp_app.send_message(
-                    mto=to_jid,
-                    mbody=text,
-                    mtype='chat')
-        except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
-            logging.warning('Alert posted but we are not online: %s', e)
+            text, html = await render_alert(config, alert)
+
+            try:
+                xmpp_app.send_message(
+                        mto=to_jid,
+                        mbody=text,
+                        mhtml=html,
+                        mtype='chat')
+            except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
+                logging.warning('Alert posted but we are not online: %s', e)
+                last_alert_message_succeeded_gauge.set(0)
+                return web.Response(
+                    body='Did not send message. Not online: %s' % e)
+            else:
+                last_alert_message_succeeded_gauge.set(1)
+                sent += 1
+        except Exception as e:
             last_alert_message_succeeded_gauge.set(0)
-            return web.Response(
-                body='Did not send message. Not online: %s' % e)
-        else:
-            last_alert_message_succeeded_gauge.set(1)
-            return web.Response(body='Sent message')
-    except Exception:
-        last_alert_message_succeeded_gauge.set(0)
-        raise
+            traceback.print_exc()
+            raise web.HTTPInternalServerError(
+                text='failed to sent some messages: %s' % e)
+    return web.Response(body='Sent %d messages' % sent)
 
 
 async def serve_health(request):
@@ -224,6 +315,7 @@ async def serve_root(request):
 
 
 web_app = web.Application()
+web_app['config'] = config
 web_app.add_routes([
     web.get('/', serve_root),
     web.get('/test', serve_test),
