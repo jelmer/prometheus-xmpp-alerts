@@ -90,7 +90,7 @@ def render_text_template(template, alert):
 
 def render_html_template(template, alert):
     from jinja2 import Template, TemplateError
-    from xml.etree.ElementTree import ET, ParseError
+    from xml.etree import ElementTree as ET
     try:
         output = Template(template).render(**alert)
     except TemplateError as e:
@@ -102,7 +102,7 @@ def render_html_template(template, alert):
     try:
         full = '<body>%s</body>' % output
         ET.fromstring(full)
-    except ParseError as e:
+    except ET.ParseError as e:
         import html
         return (f"Failed to render HTML: {e} "
                 f"in <code>{html.escape(full)}</code>")
