@@ -90,14 +90,23 @@ def render_text_template(template, alert):
 
 def render_html_template(template, alert):
     from jinja2 import Template, TemplateError
+    from xml.etree.ElementTree import ET, ParseError
     try:
-        return Template(template).render(**alert)
+        output = Template(template).render(**alert)
     except TemplateError as e:
         traceback.print_exc()
         logging.warning(
             'Alert that failed to render: \n' + json.dumps(alert, indent=4))
         return (f"Failed to render HTML template <code>{template}</code> "
                 f"with jinja2: <code>{e.message}</code>")
+    try:
+        full = '<body>%s</body>' % output
+        ET.fromstring(full)
+    except ParseError as e:
+        import html
+        return (f"Failed to render HTML: {e} "
+                f"in <code>{html.escape(full)}</code>")
+    return output
 
 
 def run_amtool(args):
