@@ -29,7 +29,6 @@ from aiohttp_openmetrics import (
 )
 
 from prometheus_xmpp import (
-    create_message_full,
     render_text_template,
     render_html_template,
     run_amtool,
@@ -80,17 +79,17 @@ Link: {{ generatorURL }}
 
 DEPRECATED_TEXT_TEMPLATE_SHORT = """\
 {{ status.upper() }}, \
-{{ parse_times(startsAt).isoformat(timespec='seconds') }}, \
+{{ parse_time(startsAt).isoformat(timespec='seconds') }}, \
 {{ annotations.summary or labels.alertname }}\
 """
 
 
 DEPRECATED_TEXT_TEMPLATE_FULL = """\
-*[{{ status.upper }}] {{ annotations.summary or labels.alertname }}*\
+*[{{ status.upper() }}] {{ annotations.summary or labels.alertname }}*
 {{ annotations.description }}\
 {% for label, value in labels.items() %}
-*{{ label }}*: {{ value }}
-{% endfor %}
+*{{ label }}:* {{ value }}
+{%- endfor %}
 """
 
 

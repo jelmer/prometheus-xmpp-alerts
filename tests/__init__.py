@@ -6,8 +6,11 @@ from datetime import datetime
 import pytz
 import unittest
 
-from prometheus_xmpp import \
-    create_message_short, create_message_full, parse_timestring
+from prometheus_xmpp import parse_timestring, render_text_template
+from prometheus_xmpp.__main__ import (
+    DEPRECATED_TEXT_TEMPLATE_SHORT,
+    DEPRECATED_TEXT_TEMPLATE_FULL,
+)
 
 
 class CreateMessageTests(unittest.TestCase):
@@ -50,16 +53,18 @@ class CreateMessageTests(unittest.TestCase):
 
     def test_create_message_short(self):
         self.assertEqual(
-            ['FIRING, 2019-04-12T23:20:50+00:00, Test Alert'],
-            list(create_message_short(self.message)))
+            'FIRING, 2019-04-12T23:20:50+00:00, Test Alert',
+            render_text_template(
+                DEPRECATED_TEXT_TEMPLATE_SHORT, self.message['alerts'][0]))
 
     def test_create_message_full(self):
         self.assertEqual(
-            ['*[FIRING] Test Alert* (groupLabelValue1 groupLabelValue2)'
+            '*[FIRING] Test Alert*'
                 + '\nThis is just a test alert.'
                 + '\n*test:* true'
-                + '\n*severity:* test'],
-            list(create_message_full(self.message)))
+                + '\n*severity:* test',
+            render_text_template(
+                DEPRECATED_TEXT_TEMPLATE_FULL, self.message['alerts'][0]))
 
 
 class ParseTimestringTests(unittest.TestCase):
