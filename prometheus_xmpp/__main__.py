@@ -189,15 +189,19 @@ class XmppApp(slixmpp.ClientXMPP):
 
 async def serve_test(request):
     xmpp_app = request.app['xmpp_app']
-    to_jid = request.match_info.get('to_jid', request.app['config']['to_jid'])
+    try:
+        recipients = [request.match_info['to_jid']]
+    except KeyError:
+        recipients = request.app['recipients']
     test_counter.inc()
     try:
         text, html = await render_alert(request.app['config'], EXAMPLE_ALERT)
-        xmpp_app.send_message(
-            mto=to_jid,
-            mbody=text,
-            mhtml=html,
-            mtype='chat')
+        for to_jid in recipients:
+            xmpp_app.send_message(
+                mto=to_jid,
+                mbody=text,
+                mhtml=html,
+                mtype='chat')
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
         logging.warning('Test alert not posted since we are not online: %s', e)
         return web.Response(
@@ -232,7 +236,10 @@ async def render_alert(config, alert):
 async def serve_alert(request):
     config = request.app['config']
     xmpp_app = request.app['xmpp_app']
-    to_jid = request.match_info.get('to_jid', config['to_jid'])
+    try:
+        recipients = [request.match_info['to_jid']]
+    except KeyError:
+        recipients = request.app['recipients']
     alert_counter.inc()
     try:
         payload = await request.json()
@@ -244,11 +251,12 @@ async def serve_alert(request):
             text, html = await render_alert(config, alert)
 
             try:
-                xmpp_app.send_message(
-                        mto=to_jid,
-                        mbody=text,
-                        mhtml=html,
-                        mtype='chat')
+                for to_jid in recipients:
+                    xmpp_app.send_message(
+                            mto=to_jid,
+                            mbody=text,
+                            mhtml=html,
+                            mtype='chat')
             except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
                 logging.warning('Alert posted but we are not online: %s', e)
                 last_alert_message_succeeded_gauge.set(0)
@@ -278,7 +286,7 @@ async def serve_root(request):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', dest='config_path',
-                        type=str, default=DEFAULT_CONF_PATH,
+                        type=str, default=None,
                         help='Path to configuration file.')
     parser.add_argument("-q", "--quiet", help="set logging to ERROR",
                         action="store_const", dest="loglevel",
@@ -293,6 +301,10 @@ def main():
     logging.basicConfig(
         level=args.loglevel, format='%(levelname)-8s %(message)s')
 
+    if args.config_path is None:
+        if os.path.isfile(DEFAULT_CONF_PATH):
+            args.config_apth = DEFAULT_CONF_PATH
+
     with open(args.config_path) as f:
         if getattr(yaml, 'FullLoader', None):
             config = yaml.load(f, Loader=yaml.FullLoader)  # type: ignore
@@ -300,10 +312,20 @@ def main():
             # Backwards compatibility with older versions of Python
             config = yaml.load(f)  # type: ignore
 
-    hostname = socket.gethostname()
-    jid = "{}/{}".format(config['jid'], hostname)
+    if 'XMPP_ID' in os.environ:
+        jid = os.environ['XMPP_ID']
+    elif 'jid' in config:
+        jid = config['jid']
+    else:
+        parser.error('no jid set in configuration or environment')
 
-    if config.get('password'):
+    hostname = socket.gethostname()
+    jid = "{}/{}".format(jid, hostname)
+
+    if 'XMPP_PASS' in os.environ:
+        def password_cb():
+            return os.environ['XMPP_PASS']
+    elif config.get('password'):
         def password_cb():
             return config['password']
     elif config.get('password_command'):
@@ -313,13 +335,24 @@ def main():
         def password_cb():
             return None
 
+    if 'XMPP_RECIPIENTS' in os.environ:
+        recipients = os.environ['XMPP_RECIPIENTS'].split(',')
+    elif 'recipients' in config:
+        recipients = config['recipients']
+    elif 'to_jid' in config:
+        recipients = config['to_jid']
+    else:
+        parser.error(
+            'no recipients specified in configuration or environment')
+
     xmpp_app = XmppApp(
         jid, password_cb,
-        config.get('amtool_allowed', [config['to_jid']]),
+        config.get('amtool_allowed', recipients]),
         config.get('alertmanager_url', None))
 
     web_app = web.Application()
     web_app['config'] = config
+    web_app['recipients'] = recipients
     web_app['xmpp_app'] = xmpp_app
     web_app.add_routes([
         web.get('/', serve_root),
@@ -335,9 +368,23 @@ def main():
         web.get('/health', serve_health),
     ])
 
+    if 'WEBHOOK_HOST' in os.environ:
+        listen_address = os.environ['WEBHOOK_HOST']
+    elif 'listen_address' in config:
+        listen_address = config['listen_address']
+    else:
+        listen_address = '127.0.0.1'
+
+    if 'WEBHOOK_PORT' in os.environ:
+        listen_port = int(os.environ['WEBHOOK_PORT'])
+    elif 'listen_port' in config:
+        listen_port = config['listen_port']
+    else:
+        listen_port = 8080
+
     xmpp_app.connect()
     web.run_app(
-        web_app, host=config['listen_address'], port=config['listen_port'],
+        web_app, host=listen_address, port=listen_port,
         loop=xmpp_app.loop)
 
 

@@ -27,11 +27,20 @@ to_jid: 'jelmer@example.com'
 listen_address: '192.168.2.1'
 listen_port: 9199
 
-# Text message template as jinja2; defaults to html_template with tags stripped.
+# Text message template as jinja2; defaults to html_template with tags stripped (optional)
 text_template: |
  {{ status.upper() }}: *{{ labels.alertname }}* at {{ labels.host or labels.instance }}:\
  {{ annotations.message }}. {{ generatorURL }}
 ```
+
+You can also set the following environment variables instead:
+
+* ``XMPP_ID`` (XMPP JID)
+* ``XMPP_PASS`` (Password)
+* ``XMPP_RECIPIENTS`` (comma-separated list of recipients)
+
+* ``WEBHOOK_HOST`` (Address to listen on)
+* ``WEBHOOK_PORT`` (Port to listen on)
 
 And run the web hook::
 
