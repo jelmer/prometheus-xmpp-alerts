@@ -32,6 +32,6 @@ jobs:
         python -m mypy --ignore-missing-imports prometheus_xmpp
     - name: Test suite run
       run: |
-        python -m unittest prometheus_xmpp.tests.test_suite
+        python -m unittest tests.test_suite
       env:
         PYTHONHASHSEED: random

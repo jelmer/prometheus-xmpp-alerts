@@ -81,6 +81,6 @@ class ParseTimestringTests(unittest.TestCase):
 
 
 def test_suite():
-    module_names = ['prometheus_xmpp.tests']
+    module_names = ['tests']
     loader = unittest.TestLoader()
     return loader.loadTestsFromNames(module_names)
