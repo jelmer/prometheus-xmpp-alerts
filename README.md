@@ -35,14 +35,17 @@ text_template: |
 
 You can also set the following environment variables instead:
 
-* ``XMPP_ID`` (XMPP JID)
-* ``XMPP_PASS`` (Password)
-* ``XMPP_RECIPIENTS`` (comma-separated list of recipients)
+* ``XMPP_ID`` - XMPP JID
+* ``XMPP_PASS`` - Password
+* ``XMPP_RECIPIENTS`` - comma-separated list of recipients
 
-* ``XMPP_AMTOOL_ALLOWED`` (comma-separated list of users)
+* ``XMPP_AMTOOL_ALLOWED`` - comma-separated list of users (optional)
 
-* ``WEBHOOK_HOST`` (Address to listen on)
-* ``WEBHOOK_PORT`` (Port to listen on)
+* ``WEBHOOK_HOST`` - Address to listen on (optional)
+* ``WEBHOOK_PORT`` - Port to listen on (optional)
+
+* ``TEXT_TEMPLATE`` - Template for text messages (see above, optional)
+* ``HTML_TEMPALTE`` - Template for HTML messages (see above, optional)
 
 And run the web hook::
 
@@ -59,7 +62,7 @@ Docker file
 
 You can build your own docker images using the Dockerfile in this directory, or
 use ``ghcr.io/jelmer/prometheus-xmpp-alerts``. Provide your configuration in
-``/config.yaml``.
+``/config.yaml`` or through environment variables.
 
 Message Format
 --------------

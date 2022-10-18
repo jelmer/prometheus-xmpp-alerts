@@ -29,7 +29,6 @@ from aiohttp_openmetrics import (
 )
 
 from prometheus_xmpp import (
-    create_message_short,
     create_message_full,
     render_text_template,
     render_html_template,
@@ -76,6 +75,22 @@ at {{ labels.host or labels.instance }}{% endif %}\
 {{ annotations.description }}{% endif %}
 
 Link: {{ generatorURL }}
+"""
+
+
+DEPRECATED_TEXT_TEMPLATE_SHORT = """\
+{{ status.upper() }}, \
+{{ parse_times(startsAt).isoformat(timespec='seconds') }}, \
+{{ annotations.summary or labels.alertname }}\
+"""
+
+
+DEPRECATED_TEXT_TEMPLATE_FULL = """\
+*[{{ status.upper }}] {{ annotations.summary or labels.alertname }}*\
+{{ annotations.description }}\
+{% for label, value in labels.items() %}
+*{{ label }}*: {{ value }}
+{% endfor %}
 """
 
 
@@ -195,7 +210,10 @@ async def serve_test(request):
         recipients = request.app['recipients']
     test_counter.inc()
     try:
-        text, html = await render_alert(request.app['config'], EXAMPLE_ALERT)
+        text, html = await render_alert(
+            request.app['text_template'],
+            request.app['html_template'],
+            EXAMPLE_ALERT)
         for to_jid in recipients:
             xmpp_app.send_message(
                 mto=to_jid,
@@ -210,23 +228,13 @@ async def serve_test(request):
         return web.Response(body='Sent message.')
 
 
-async def render_alert(config, alert):
-    # format is here just for backwards compatibility
-    if 'format' in config and config['format'] == 'full':
-        text = '\n--\n'.join(create_message_full(alert))
-        html = None
-    elif 'format' in config and config['format'] == 'short':
-        text = '\n'.join(create_message_short(alert))
-        html = None
-    elif 'html_template' in config:
-        html = render_html_template(config['html_template'], alert)
-        if 'text_template' in config:
-            text = render_text_template(config['text_template'], alert)
-        else:
+async def render_alert(text_template, html_template, alert):
+    if html_template:
+        html = render_html_template(html_template, alert)
+        if not text_template:
             text = strip_html_tags(html)
-    elif 'text_template' in config:
-        text = render_text_template(config['text_template'], alert)
-        html = None
+    elif text_template:
+        text = render_text_template(text_template, alert)
     else:
         text = render_text_template(DEFAULT_TEXT_TEMPLATE, alert)
         html = render_html_template(DEFAULT_HTML_TEMPLATE, alert)
@@ -234,7 +242,6 @@ async def render_alert(config, alert):
 
 
 async def serve_alert(request):
-    config = request.app['config']
     xmpp_app = request.app['xmpp_app']
     try:
         recipients = [request.match_info['to_jid']]
@@ -248,7 +255,9 @@ async def serve_alert(request):
     sent = 0
     for alert in payload['alerts']:
         try:
-            text, html = await render_alert(config, alert)
+            text, html = await render_alert(
+                request.app['text_template'], request.app['html_template'],
+                alert)
 
             try:
                 for to_jid in recipients:
@@ -288,6 +297,9 @@ def main():
     parser.add_argument('--config', dest='config_path',
                         type=str, default=None,
                         help='Path to configuration file.')
+    parser.add_argument('--optional-config', dest='optional_config_path',
+                        type=str, default=DEFAULT_CONF_PATH,
+                        help=argparse.HIDDEN)
     parser.add_argument("-q", "--quiet", help="set logging to ERROR",
                         action="store_const", dest="loglevel",
                         const=logging.ERROR, default=logging.INFO)
@@ -301,9 +313,9 @@ def main():
     logging.basicConfig(
         level=args.loglevel, format='%(levelname)-8s %(message)s')
 
-    if args.config_path is None:
-        if os.path.isfile(DEFAULT_CONF_PATH):
-            args.config_apth = DEFAULT_CONF_PATH
+    if not args.config_path and args.optional_config_path:
+        if os.path.isfile(args.optional_config_path):
+            args.config_path = args.optional_config_path
 
     with open(args.config_path) as f:
         if getattr(yaml, 'FullLoader', None):
@@ -362,8 +374,28 @@ def main():
         amtool_allowed,
         alertmanager_url)
 
+    # Backward compatibility
+    text_template = os.environ.get('TEXT_TEMPLATE')
+    html_template = os.environ.get('HTML_TEMPLATE')
+
+    if not text_template and 'text_template' in config:
+        text_template = config['text_template']
+
+    if not html_template and 'html_template' in config:
+        html_template = config['html_template']
+
+    if not text_template and not html_template and 'format' in config:
+        html = None
+        if config['format'] == 'full':
+            text_template = DEPRECATED_TEXT_TEMPLATE_FULL
+        elif config['format'] == 'short':
+            text_template = DEPRECATED_TEXT_TEMPLATE_SHORT
+        else:
+            parser.error("unsupport config format: %s" % config['format'])
+
     web_app = web.Application()
-    web_app['config'] = config
+    web_app['text_template'] = text_template
+    web_app['html_template'] = html_template
     web_app['recipients'] = recipients
     web_app['xmpp_app'] = xmpp_app
     web_app.add_routes([
