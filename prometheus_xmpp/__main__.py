@@ -345,10 +345,22 @@ def main():
         parser.error(
             'no recipients specified in configuration or environment')
 
+    if 'XMPP_AMTOOL_ALLOWED' in os.environ:
+        amtool_allowed = os.environ['XMPP_AMTOOL_ALLOWED'].split(',')
+    elif 'amtool_allowed' in config:
+        amtool_allowed = config['amtool_allowed']
+    else:
+        amtool_allowed = list(recipients)
+
+    if 'ALERTMANAGER_URL' in os.environ:
+        alertmanager_url = os.environ['ALERTMANAGER_URL']
+    else:
+        alertmanager_url = config.get('alertmanager_url')
+
     xmpp_app = XmppApp(
         jid, password_cb,
-        config.get('amtool_allowed', recipients]),
-        config.get('alertmanager_url', None))
+        amtool_allowed,
+        alertmanager_url)
 
     web_app = web.Application()
     web_app['config'] = config

@@ -39,6 +39,8 @@ You can also set the following environment variables instead:
 * ``XMPP_PASS`` (Password)
 * ``XMPP_RECIPIENTS`` (comma-separated list of recipients)
 
+* ``XMPP_AMTOOL_ALLOWED`` (comma-separated list of users)
+
 * ``WEBHOOK_HOST`` (Address to listen on)
 * ``WEBHOOK_PORT`` (Port to listen on)
 
@@ -49,7 +51,7 @@ $ python3 -m prometheus_xmpp --config=/etc/prometheus/xmpp-alerts.yaml
 ```
 
 If you have [amtool](https://github.com/prometheus/alertmanager#amtool) set up,
-then you can also allow ``to_jid`` to see existing alerts and manage silences.
+then you can also allow users to see existing alerts and manage silences.
 Set the ``amtool_allowed`` option to JIDs that are allowed to use amtool.
 
 Docker file
