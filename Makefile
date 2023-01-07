@@ -3,10 +3,13 @@ PYTHON = python3
 all: check flake8
 
 check:
-	$(PYTHON) -m unittest prometheus_xmpp.tests.test_suite
+	$(PYTHON) -m unittest tests.test_suite
 
 flake8:
-	flake8
+	flake8 prometheus_xmpp/
+
+typing:
+	mypy prometheus_xmpp/
 
 .PHONY: all flake8 check
 
