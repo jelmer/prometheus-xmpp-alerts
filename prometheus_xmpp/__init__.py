@@ -36,7 +36,7 @@ def create_message_short(message):
             summary = alert['annotations']['summary']
         except KeyError:
             summary = alert['labels']['alertname']
-        yield '%s, %s, %s' % (
+        yield '{}, {}, {}'.format(
             alert['status'].upper(),
             parse_timestring(alert['startsAt']).isoformat(timespec='seconds'),
             summary)
@@ -57,7 +57,7 @@ def create_message_full(message):
         labels = ''
         if 'labels' in alert:
             for label, value in alert['labels'].items():
-                labels += '\n*{}:* {}'.format(label, value)
+                labels += f'\n*{label}:* {value}'
 
         try:
             summary = alert['annotations']['summary']
@@ -114,6 +114,6 @@ def run_amtool(args):
     # TODO(jelmer): Support setting the current user, e.g. for silence
     # ownership.
     ret = subprocess.run(
-        ["amtool"] + args, shell=False, universal_newlines=True,
+        ["amtool"] + args, shell=False, text=True,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     return ret.stdout
