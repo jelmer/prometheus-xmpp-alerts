@@ -29,8 +29,6 @@ from aiohttp_openmetrics import (
 )
 
 from prometheus_xmpp import (
-    create_message_short,
-    create_message_full,
     render_text_template,
     render_html_template,
     run_amtool,
@@ -76,6 +74,22 @@ at {{ labels.host or labels.instance }}{% endif %}\
 {{ annotations.description }}{% endif %}
 
 Link: {{ generatorURL }}
+"""
+
+
+DEPRECATED_TEXT_TEMPLATE_SHORT = """\
+{{ status.upper() }}, \
+{{ parse_time(startsAt).isoformat(timespec='seconds') }}, \
+{{ annotations.summary or labels.alertname }}\
+"""
+
+
+DEPRECATED_TEXT_TEMPLATE_FULL = """\
+*[{{ status.upper() }}] {{ annotations.summary or labels.alertname }}*
+{{ annotations.description }}\
+{% for label, value in labels.items() %}
+*{{ label }}:* {{ value }}
+{%- endfor %}
 """
 
 
@@ -189,15 +203,22 @@ class XmppApp(slixmpp.ClientXMPP):
 
 async def serve_test(request):
     xmpp_app = request.app['xmpp_app']
-    to_jid = request.match_info.get('to_jid', request.app['config']['to_jid'])
+    try:
+        recipients = [request.match_info['to_jid']]
+    except KeyError:
+        recipients = request.app['recipients']
     test_counter.inc()
     try:
-        text, html = await render_alert(request.app['config'], EXAMPLE_ALERT)
-        xmpp_app.send_message(
-            mto=to_jid,
-            mbody=text,
-            mhtml=html,
-            mtype='chat')
+        text, html = await render_alert(
+            request.app['text_template'],
+            request.app['html_template'],
+            EXAMPLE_ALERT)
+        for to_jid in recipients:
+            xmpp_app.send_message(
+                mto=to_jid,
+                mbody=text,
+                mhtml=html,
+                mtype='chat')
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
         logging.warning('Test alert not posted since we are not online: %s', e)
         return web.Response(
@@ -206,23 +227,13 @@ async def serve_test(request):
         return web.Response(body='Sent message.')
 
 
-async def render_alert(config, alert):
-    # format is here just for backwards compatibility
-    if 'format' in config and config['format'] == 'full':
-        text = '\n--\n'.join(create_message_full(alert))
-        html = None
-    elif 'format' in config and config['format'] == 'short':
-        text = '\n'.join(create_message_short(alert))
-        html = None
-    elif 'html_template' in config:
-        html = render_html_template(config['html_template'], alert)
-        if 'text_template' in config:
-            text = render_text_template(config['text_template'], alert)
-        else:
+async def render_alert(text_template, html_template, alert):
+    if html_template:
+        html = render_html_template(html_template, alert)
+        if not text_template:
             text = strip_html_tags(html)
-    elif 'text_template' in config:
-        text = render_text_template(config['text_template'], alert)
-        html = None
+    elif text_template:
+        text = render_text_template(text_template, alert)
     else:
         text = render_text_template(DEFAULT_TEXT_TEMPLATE, alert)
         html = render_html_template(DEFAULT_HTML_TEMPLATE, alert)
@@ -230,9 +241,11 @@ async def render_alert(config, alert):
 
 
 async def serve_alert(request):
-    config = request.app['config']
     xmpp_app = request.app['xmpp_app']
-    to_jid = request.match_info.get('to_jid', config['to_jid'])
+    try:
+        recipients = [request.match_info['to_jid']]
+    except KeyError:
+        recipients = request.app['recipients']
     alert_counter.inc()
     try:
         payload = await request.json()
@@ -241,14 +254,17 @@ async def serve_alert(request):
     sent = 0
     for alert in payload['alerts']:
         try:
-            text, html = await render_alert(config, alert)
+            text, html = await render_alert(
+                request.app['text_template'], request.app['html_template'],
+                alert)
 
             try:
-                xmpp_app.send_message(
-                        mto=to_jid,
-                        mbody=text,
-                        mhtml=html,
-                        mtype='chat')
+                for to_jid in recipients:
+                    xmpp_app.send_message(
+                            mto=to_jid,
+                            mbody=text,
+                            mhtml=html,
+                            mtype='chat')
             except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
                 logging.warning('Alert posted but we are not online: %s', e)
                 last_alert_message_succeeded_gauge.set(0)
@@ -278,8 +294,11 @@ async def serve_root(request):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', dest='config_path',
-                        type=str, default=DEFAULT_CONF_PATH,
+                        type=str, default=None,
                         help='Path to configuration file.')
+    parser.add_argument('--optional-config', dest='optional_config_path',
+                        type=str, default=DEFAULT_CONF_PATH,
+                        help=argparse.HIDDEN)
     parser.add_argument("-q", "--quiet", help="set logging to ERROR",
                         action="store_const", dest="loglevel",
                         const=logging.ERROR, default=logging.INFO)
@@ -293,6 +312,10 @@ def main():
     logging.basicConfig(
         level=args.loglevel, format='%(levelname)-8s %(message)s')
 
+    if not args.config_path and args.optional_config_path:
+        if os.path.isfile(args.optional_config_path):
+            args.config_path = args.optional_config_path
+
     with open(args.config_path) as f:
         if getattr(yaml, 'FullLoader', None):
             config = yaml.load(f, Loader=yaml.FullLoader)  # type: ignore
@@ -300,10 +323,20 @@ def main():
             # Backwards compatibility with older versions of Python
             config = yaml.load(f)  # type: ignore
 
-    hostname = socket.gethostname()
-    jid = "{}/{}".format(config['jid'], hostname)
+    if 'XMPP_ID' in os.environ:
+        jid = os.environ['XMPP_ID']
+    elif 'jid' in config:
+        jid = config['jid']
+    else:
+        parser.error('no jid set in configuration or environment')
 
-    if config.get('password'):
+    hostname = socket.gethostname()
+    jid = "{}/{}".format(jid, hostname)
+
+    if 'XMPP_PASS' in os.environ:
+        def password_cb():
+            return os.environ['XMPP_PASS']
+    elif config.get('password'):
         def password_cb():
             return config['password']
     elif config.get('password_command'):
@@ -313,13 +346,56 @@ def main():
         def password_cb():
             return None
 
+    if 'XMPP_RECIPIENTS' in os.environ:
+        recipients = os.environ['XMPP_RECIPIENTS'].split(',')
+    elif 'recipients' in config:
+        recipients = config['recipients']
+    elif 'to_jid' in config:
+        recipients = config['to_jid']
+    else:
+        parser.error(
+            'no recipients specified in configuration or environment')
+
+    if 'XMPP_AMTOOL_ALLOWED' in os.environ:
+        amtool_allowed = os.environ['XMPP_AMTOOL_ALLOWED'].split(',')
+    elif 'amtool_allowed' in config:
+        amtool_allowed = config['amtool_allowed']
+    else:
+        amtool_allowed = list(recipients)
+
+    if 'ALERTMANAGER_URL' in os.environ:
+        alertmanager_url = os.environ['ALERTMANAGER_URL']
+    else:
+        alertmanager_url = config.get('alertmanager_url')
+
     xmpp_app = XmppApp(
         jid, password_cb,
-        config.get('amtool_allowed', [config['to_jid']]),
-        config.get('alertmanager_url', None))
+        amtool_allowed,
+        alertmanager_url)
+
+    # Backward compatibility
+    text_template = os.environ.get('TEXT_TEMPLATE')
+    html_template = os.environ.get('HTML_TEMPLATE')
+
+    if not text_template and 'text_template' in config:
+        text_template = config['text_template']
+
+    if not html_template and 'html_template' in config:
+        html_template = config['html_template']
+
+    if not text_template and not html_template and 'format' in config:
+        html = None
+        if config['format'] == 'full':
+            text_template = DEPRECATED_TEXT_TEMPLATE_FULL
+        elif config['format'] == 'short':
+            text_template = DEPRECATED_TEXT_TEMPLATE_SHORT
+        else:
+            parser.error("unsupport config format: %s" % config['format'])
 
     web_app = web.Application()
-    web_app['config'] = config
+    web_app['text_template'] = text_template
+    web_app['html_template'] = html_template
+    web_app['recipients'] = recipients
     web_app['xmpp_app'] = xmpp_app
     web_app.add_routes([
         web.get('/', serve_root),
@@ -335,9 +411,23 @@ def main():
         web.get('/health', serve_health),
     ])
 
+    if 'WEBHOOK_HOST' in os.environ:
+        listen_address = os.environ['WEBHOOK_HOST']
+    elif 'listen_address' in config:
+        listen_address = config['listen_address']
+    else:
+        listen_address = '127.0.0.1'
+
+    if 'WEBHOOK_PORT' in os.environ:
+        listen_port = int(os.environ['WEBHOOK_PORT'])
+    elif 'listen_port' in config:
+        listen_port = config['listen_port']
+    else:
+        listen_port = 8080
+
     xmpp_app.connect()
     web.run_app(
-        web_app, host=config['listen_address'], port=config['listen_port'],
+        web_app, host=listen_address, port=listen_port,
         loop=xmpp_app.loop)
 
 
