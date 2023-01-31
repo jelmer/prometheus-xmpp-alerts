@@ -12,12 +12,11 @@
 # $ python3 prometheus-xmpp-alerts --config=xmpp-alerts.yml.example
 
 import json
-import re
-from datetime import datetime
 import logging
+import re
 import subprocess
 import traceback
-
+from datetime import datetime
 
 __version__ = (0, 5, 6)
 version_string = '.'.join(map(str, __version__))
@@ -89,8 +88,9 @@ def render_text_template(template, alert):
 
 
 def render_html_template(template, alert):
-    from jinja2 import Template, TemplateError
     from xml.etree import ElementTree as ET
+
+    from jinja2 import Template, TemplateError
     try:
         output = Template(template).render(**alert)
     except TemplateError as e:

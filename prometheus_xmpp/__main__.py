@@ -10,33 +10,24 @@
 #
 # Edit xmpp-alerts.yml.example, then run:
 # $ python3 prometheus-xmpp-alerts --config=xmpp-alerts.yml.example
-import subprocess
 import argparse
 import json
 import logging
 import shlex
 import socket
+import subprocess
 import sys
 import traceback
 
 import slixmpp
 import yaml
 from aiohttp import web
-from aiohttp_openmetrics import (
-    Counter,
-    Gauge,
-    metrics as serve_metrics,
-)
+from aiohttp_openmetrics import Counter, Gauge
+from aiohttp_openmetrics import metrics as serve_metrics
 
-from prometheus_xmpp import (
-    create_message_short,
-    create_message_full,
-    render_text_template,
-    render_html_template,
-    run_amtool,
-    strip_html_tags,
-)
-
+from prometheus_xmpp import (create_message_full, create_message_short,
+                             render_html_template, render_text_template,
+                             run_amtool, strip_html_tags)
 
 DEFAULT_CONF_PATH = '/etc/prometheus/xmpp-alerts.yml'
 
