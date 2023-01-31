@@ -2,12 +2,13 @@
 # Copyright (C) 2018 Jelmer Vernooij <jelmer@jelmer.uk>
 #
 
-from datetime import datetime
-import pytz
 import unittest
+from datetime import datetime
 
-from prometheus_xmpp import \
-    create_message_short, create_message_full, parse_timestring
+import pytz
+
+from prometheus_xmpp import (create_message_full, create_message_short,
+                             parse_timestring)
 
 
 class CreateMessageTests(unittest.TestCase):
