@@ -18,7 +18,7 @@ import subprocess
 import traceback
 from datetime import datetime
 
-__version__ = (0, 5, 6)
+__version__ = (0, 5, 7)
 version_string = '.'.join(map(str, __version__))
 
 
