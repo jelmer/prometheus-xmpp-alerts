@@ -1,0 +1,10 @@
+version: "3"
+services:
+  xmpp-bot:
+    image: ghcr.io/jelmer/prometheus-xmpp-alerts
+    container_name: xmpp-bot
+    user: 1000:1000
+    ports:
+     - 9199:9199
+    volumes:
+      - ./data/xmpp-bot/config.yaml:/config.yaml:ro

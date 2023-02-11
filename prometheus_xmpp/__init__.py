@@ -11,12 +11,14 @@
 # Edit xmpp-alerts.yml.example, then run:
 # $ python3 prometheus-xmpp-alerts --config=xmpp-alerts.yml.example
 
+import json
+import logging
 import re
-from datetime import datetime
 import subprocess
+import traceback
+from datetime import datetime
 
-
-__version__ = (0, 5, 2)
+__version__ = (0, 5, 7)
 version_string = '.'.join(map(str, __version__))
 
 
@@ -33,7 +35,7 @@ def create_message_short(message):
             summary = alert['annotations']['summary']
         except KeyError:
             summary = alert['labels']['alertname']
-        yield '%s, %s, %s' % (
+        yield '{}, {}, {}'.format(
             alert['status'].upper(),
             parse_timestring(alert['startsAt']).isoformat(timespec='seconds'),
             summary)
@@ -54,7 +56,7 @@ def create_message_full(message):
         labels = ''
         if 'labels' in alert:
             for label, value in alert['labels'].items():
-                labels += '\n*{}:* {}'.format(label, value)
+                labels += f'\n*{label}:* {value}'
 
         try:
             summary = alert['annotations']['summary']
@@ -68,11 +70,50 @@ def create_message_full(message):
             labels)
 
 
+def strip_html_tags(html):
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, features="html.parser")
+    return soup.get_text()
+
+
+def render_text_template(template, alert):
+    from jinja2 import Template, TemplateError
+    try:
+        return Template(template, autoescape=False).render(**alert)
+    except TemplateError as e:
+        traceback.print_exc()
+        logging.warning(
+            'Alert that failed to render: \n' + json.dumps(alert, indent=4))
+        return "Failed to render text template with jinja2: %s" % e.message
+
+
+def render_html_template(template, alert):
+    from xml.etree import ElementTree as ET
+
+    from jinja2 import Template, TemplateError
+    try:
+        output = Template(template).render(**alert)
+    except TemplateError as e:
+        traceback.print_exc()
+        logging.warning(
+            'Alert that failed to render: \n' + json.dumps(alert, indent=4))
+        return (f"Failed to render HTML template <code>{template}</code> "
+                f"with jinja2: <code>{e.message}</code>")
+    try:
+        full = '<body>%s</body>' % output
+        ET.fromstring(full)
+    except ET.ParseError as e:
+        import html
+        return (f"Failed to render HTML: {e} "
+                f"in <code>{html.escape(full)}</code>")
+    return output
+
+
 def run_amtool(args):
     """Run amtool with the specified arguments."""
     # TODO(jelmer): Support setting the current user, e.g. for silence
     # ownership.
     ret = subprocess.run(
-        ["amtool"] + args, shell=False, universal_newlines=True,
+        ["amtool"] + args, shell=False, text=True,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     return ret.stdout
