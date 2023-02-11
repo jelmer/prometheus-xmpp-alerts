@@ -10,5 +10,16 @@ to_jid: 'jelmer@example.com'
 # List of JIDs that are allowed to query alerts and set silences. Defaults to
 # to_jid.
 amtool_allowed: []
-# Message format (short, full)
-format: 'short'
+
+# HTML message template as jinja2:
+# html_template: |
+#  <strong>{{ status.upper() }}</strong>: <i>{{ labels.alertname }}</i>
+#  {% if labels.host or labels.instance %} at {{ labels.host or labels.instance }}{% endif %}
+#  {% if annotations.message %}<br/>{{ annotations.message.replace("\n", "<br/>") }}{% endif %}
+#  {% if annotations.description %}<br/>{{ annotations.description }}{% endif %}
+#  <br/><a href="{{ generatorURL }}">Alert link</a>
+
+# Text message template as jinja2; defaults to html_template with tags stripped.
+# text_template: |
+#  {{ status.upper() }}: *{{ labels.alertname }}* at {{ labels.host or labels.instance }}:\
+#  {{ annotations.message }}. {{ generatorURL }}
