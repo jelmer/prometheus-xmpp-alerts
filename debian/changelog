@@ -1,6 +1,7 @@
 prometheus-xmpp-alerts (0.5.7-1) UNRELEASED; urgency=low
 
   * New upstream release.
+  * Update standards version to 4.6.2, no changes needed.
 
  -- Jelmer Vernooĳ <jelmer@debian.org>  Sat, 11 Feb 2023 13:32:10 -0000
 

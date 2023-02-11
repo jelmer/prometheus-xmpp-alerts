@@ -11,7 +11,7 @@ Build-Depends:
                python3-prometheus-client,
                debhelper-compat (= 13)
 Maintainer: Jelmer Vernooĳ <jelmer@debian.org>
-Standards-Version: 4.6.1
+Standards-Version: 4.6.2
 Testsuite: autopkgtest-pkg-python
 Vcs-Browser: https://salsa.debian.org/jelmer/prometheus-xmpp-alerts
 Vcs-Git: https://salsa.debian.org/jelmer/prometheus-xmpp-alerts.git/
