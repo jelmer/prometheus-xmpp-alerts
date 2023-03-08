@@ -17,25 +17,26 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip pyasn1 aiohttp
-        python setup.py develop
-    - name: Style checks
-      run: |
-        python -m pip install flake8
-        python -m flake8 prometheus_xmpp
-    - name: Typing checks
-      run: |
-        pip install -U mypy types-pytz types-jinja2 types-PyYAML
-        python -m mypy --ignore-missing-imports prometheus_xmpp
-    - name: Test suite run
-      run: |
-        python -m unittest tests.test_suite
-      env:
-        PYTHONHASHSEED: random
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip pyasn1 aiohttp
+          python setup.py develop
+      - name: Style checks
+        run: |
+          python -m pip install flake8
+          python -m flake8 prometheus_xmpp
+      - name: Typing checks
+        run: |
+          pip install -U mypy types-pytz types-jinja2 types-PyYAML
+          python -m mypy --ignore-missing-imports prometheus_xmpp
+      - name: Test suite run
+        run: |
+          python -m pip install ".[testing]"
+          python -m unittest tests.test_suite
+        env:
+          PYTHONHASHSEED: random
