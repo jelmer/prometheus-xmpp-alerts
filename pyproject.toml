@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prometheus-xmpp-alerts"
+authors = [{name = "Jelmer Vernooij", email = "jelmer@jelmer.uk"}]
+description = "Prometheus XMPP Alerts hook"
+license = {text = "Apachev2"}
+keywords = ["prometheus xmpp jabber"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: POSIX",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Software Development :: Version Control",
+]
+requires-python = ">= 3.7"
+dependencies = [
+    "slixmpp",
+    "aiohttp",
+    "pytz",
+    "pyyaml",
+    "aiohttp_openmetrics",
+    "jinja2",
+    "bs4",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://jelmer.uk/code/prometheus-xmpp-alerts"
+"Bug Tracker" = "https://github.com/jelmer/prometheus-xmpp-alerts/issues"
+Repository = "https://github.com/jelmer/prometheus-xmpp-alerts"
+GitHub = "https://github.com/jelmer/prometheus-xmpp-alerts"
+
+[project.scripts]
+prometheus-xmpp-alerts = "prometheus_xmpp.__main__:main"
+
+[project.optional-dependencies]
+testing = ["pytz"]
+
+[tool.setuptools]
+packages = ["prometheus_xmpp"]
+include-package-data = false
+
+[tool.setuptools.dynamic]
+version = {attr = "prometheus_xmpp.__version__"}
