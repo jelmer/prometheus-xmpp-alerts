@@ -44,7 +44,6 @@ from slixmpp_omemo import UndecidedException, UntrustedException, NoAvailableSes
 from omemo.exceptions import MissingBundleException
 
 
-
 DEFAULT_CONF_PATH = "/etc/prometheus/xmpp-alerts.yml"
 
 DEFAULT_HTML_TEMPLATE = """\
@@ -255,80 +254,83 @@ class XmppApp(slixmpp.ClientXMPP):
             await self.send_encrypted(mto=recipients, mtype="groupchat", body=mbody)
 
     async def send_encrypted(self, mto: JID, mtype: str, body):
-            """Helper to reply with encrypted messages"""
-            if self.muc:
-                msg = self.make_message(mto=self.muc_jid, mtype=mtype)
-            else:
-                msg = self.make_message(mto=mto, mtype=mtype)              
+        """Helper to reply with encrypted messages"""
+        if self.muc:
+            msg = self.make_message(mto=self.muc_jid, mtype=mtype)
+        else:
+            msg = self.make_message(mto=mto, mtype=mtype)
 
-            msg['eme']['namespace'] = self.eme_ns
-            msg['eme']['name'] = self['xep_0380'].mechanisms[self.eme_ns]
+        msg["eme"]["namespace"] = self.eme_ns
+        msg["eme"]["name"] = self["xep_0380"].mechanisms[self.eme_ns]
 
-            expect_problems = {}  # type: Optional[Dict[JID, List[int]]]
+        expect_problems = {}  # type: Optional[Dict[JID, List[int]]]
 
-            while True:
-                try:
-                    # `encrypt_message` excepts the plaintext to be sent, a list of
-                    # bare JIDs to encrypt to, and optionally a dict of problems to
-                    # expect per bare JID.
-                    #
-                    # Note that this function returns an `<encrypted/>` object,
-                    # and not a full Message stanza. This combined with the
-                    # `recipients` parameter that requires for a list of JIDs,
-                    # allows you to encrypt for 1:1 as well as groupchats (MUC).
-                    #
-                    # `expect_problems`: See EncryptionPrepareException handling.
-                    recipients = mto
-                    encrypt = await self['xep_0384'].encrypt_message(body, recipients, expect_problems)
-                    msg.append(encrypt)
-                    return msg.send()
-                except UndecidedException as exn:
-                    # The library prevents us from sending a message to an
-                    # untrusted/undecided barejid, so we need to make a decision here.
-                    # This is where you prompt your user to ask what to do. In
-                    # this bot we will automatically trust undecided recipients.
-                    await self['xep_0384'].trust(exn.bare_jid, exn.device, exn.ik)
-                # TODO: catch NoEligibleDevicesException
-                except EncryptionPrepareException as exn:
-                    # This exception is being raised when the library has tried
-                    # all it could and doesn't know what to do anymore. It
-                    # contains a list of exceptions that the user must resolve, or
-                    # explicitely ignore via `expect_problems`.
-                    # TODO: We might need to bail out here if errors are the same?
-                    for error in exn.errors:
-                        if isinstance(error, MissingBundleException):
-                            # We choose to ignore MissingBundleException. It seems
-                            # to be somewhat accepted that it's better not to
-                            # encrypt for a device if it has problems and encrypt
-                            # for the rest, rather than error out. The "faulty"
-                            # device won't be able to decrypt and should display a
-                            # generic message. The receiving end-user at this
-                            # point can bring up the issue if it happens.
-                            self.plain_reply(
-                                mto, mtype,
-                                'Could not find keys for device "%d" of recipient "%s". Skipping.' %
-                                (error.device, error.bare_jid),
-                            )
-                            jid = JID(error.bare_jid)
-                            device_list = expect_problems.setdefault(jid, [])
-                            device_list.append(error.device)
-                except (IqError, IqTimeout) as exn:
-                    self.plain_reply(
-                        mto, mtype,
-                        'An error occured while fetching information on a recipient.\n%r' % exn,
-                    )
-                    return None
-                except Exception as exn:
-                    await self.plain_reply(
-                        mto, mtype,
-                        'An error occured while attempting to encrypt.\n%r' % exn,
-                    )
-                    raise
+        while True:
+            try:
+                # `encrypt_message` excepts the plaintext to be sent, a list of
+                # bare JIDs to encrypt to, and optionally a dict of problems to
+                # expect per bare JID.
+                #
+                # Note that this function returns an `<encrypted/>` object,
+                # and not a full Message stanza. This combined with the
+                # `recipients` parameter that requires for a list of JIDs,
+                # allows you to encrypt for 1:1 as well as groupchats (MUC).
+                #
+                # `expect_problems`: See EncryptionPrepareException handling.
+                recipients = mto
+                encrypt = await self["xep_0384"].encrypt_message(
+                    body, recipients, expect_problems
+                )
+                msg.append(encrypt)
+                return msg.send()
+            except UndecidedException as exn:
+                # The library prevents us from sending a message to an
+                # untrusted/undecided barejid, so we need to make a decision here.
+                # This is where you prompt your user to ask what to do. In
+                # this bot we will automatically trust undecided recipients.
+                await self["xep_0384"].trust(exn.bare_jid, exn.device, exn.ik)
+            # TODO: catch NoEligibleDevicesException
+            except EncryptionPrepareException as exn:
+                # This exception is being raised when the library has tried
+                # all it could and doesn't know what to do anymore. It
+                # contains a list of exceptions that the user must resolve, or
+                # explicitely ignore via `expect_problems`.
+                # TODO: We might need to bail out here if errors are the same?
+                for error in exn.errors:
+                    if isinstance(error, MissingBundleException):
+                        # We choose to ignore MissingBundleException. It seems
+                        # to be somewhat accepted that it's better not to
+                        # encrypt for a device if it has problems and encrypt
+                        # for the rest, rather than error out. The "faulty"
+                        # device won't be able to decrypt and should display a
+                        # generic message. The receiving end-user at this
+                        # point can bring up the issue if it happens.
+                        self.plain_reply(
+                            mto,
+                            mtype,
+                            'Could not find keys for device "%d" of recipient "%s". Skipping.'
+                            % (error.device, error.bare_jid),
+                        )
+                        jid = JID(error.bare_jid)
+                        device_list = expect_problems.setdefault(jid, [])
+                        device_list.append(error.device)
+            except (IqError, IqTimeout) as exn:
+                self.plain_reply(
+                    mto,
+                    mtype,
+                    "An error occured while fetching information on a recipient.\n%r"
+                    % exn,
+                )
+                return None
+            except Exception as exn:
+                await self.plain_reply(
+                    mto,
+                    mtype,
+                    "An error occured while attempting to encrypt.\n%r" % exn,
+                )
+                raise
 
-            return None
-
-
-
+        return None
 
 
 async def serve_test(request):
