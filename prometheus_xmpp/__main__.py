@@ -39,8 +39,8 @@ from prometheus_xmpp import (
 from slixmpp import JID
 from slixmpp.exceptions import IqTimeout, IqError
 import slixmpp_omemo
-from slixmpp_omemo import PluginCouldNotLoad, MissingOwnKey, EncryptionPrepareException
-from slixmpp_omemo import UndecidedException, UntrustedException, NoAvailableSession
+from slixmpp_omemo import PluginCouldNotLoad, EncryptionPrepareException
+from slixmpp_omemo import UndecidedException
 from omemo.exceptions import MissingBundleException
 
 
@@ -242,7 +242,8 @@ class XmppApp(slixmpp.ClientXMPP):
                 return_exceptions=True,
             )
             muc_affiliation = owners + admins + members + outcasts
-            recipients = [JID(nick) for nick in muc_affiliations]
+            recipients = [JID(nick) for nick in muc_affiliation]
+            recipients.remove(self.jid)
             logging.debug(f"sending encrypted message to recipients: {recipients}")
             await self.send_encrypted(mto=recipients, mtype="groupchat", body=mbody)
 
@@ -251,7 +252,7 @@ class XmppApp(slixmpp.ClientXMPP):
         if self.muc:
             msg = self.make_message(mto=self.muc_jid, mtype=mtype)
         else:
-            msg = self.make_message(mto=mto, mtype=mtype)
+            msg = self.make_message(mto=mto[0], mtype=mtype)
 
         msg["eme"]["namespace"] = self.eme_ns
         msg["eme"]["name"] = self["xep_0380"].mechanisms[self.eme_ns]
@@ -298,7 +299,9 @@ class XmppApp(slixmpp.ClientXMPP):
                         # device won't be able to decrypt and should display a
                         # generic message. The receiving end-user at this
                         # point can bring up the issue if it happens.
-                        self.plain_reply(
+                        if self.muc:
+                            mto=self.muc_jid
+                        self.send_message(
                             mto,
                             mtype,
                             'Could not find keys for device "%d" of recipient "%s". Skipping.'
@@ -308,7 +311,9 @@ class XmppApp(slixmpp.ClientXMPP):
                         device_list = expect_problems.setdefault(jid, [])
                         device_list.append(error.device)
             except (IqError, IqTimeout) as exn:
-                self.plain_reply(
+                if self.muc:
+                    mto=self.muc_jid
+                self.send_message(
                     mto,
                     mtype,
                     "An error occured while fetching information on a recipient.\n%r"
@@ -316,7 +321,9 @@ class XmppApp(slixmpp.ClientXMPP):
                 )
                 return None
             except Exception as exn:
-                await self.plain_reply(
+                if self.muc:
+                    mto=self.muc_jid
+                await self.send_message(
                     mto,
                     mtype,
                     "An error occured while attempting to encrypt.\n%r" % exn,
