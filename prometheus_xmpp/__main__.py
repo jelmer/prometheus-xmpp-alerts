@@ -244,7 +244,7 @@ class XmppApp(slixmpp.ClientXMPP):
             muc_affiliation = owners + admins + members + outcasts
             recipients = [JID(nick) for nick in muc_affiliation]
             recipients.remove(self.jid)
-            logging.debug(f"sending encrypted message to recipients: {recipients}")
+            logging.debug("sending encrypted message to recipients %s", recipients)
             await self.send_encrypted(mto=recipients, mtype="groupchat", body=mbody)
 
     async def send_encrypted(self, mto: JID, mtype: str, body):
