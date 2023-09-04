@@ -282,6 +282,7 @@ class XmppApp(slixmpp.ClientXMPP):
                 # untrusted/undecided barejid, so we need to make a decision here.
                 # This is where you prompt your user to ask what to do. In
                 # this bot we will automatically trust undecided recipients.
+                logging.debug("OMEMO: automatic addition of %s to trusted JID", exn.bare_jid)
                 await self["xep_0384"].trust(exn.bare_jid, exn.device, exn.ik)
             # TODO: catch NoEligibleDevicesException
             except EncryptionPrepareException as exn:
