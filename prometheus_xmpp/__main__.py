@@ -225,15 +225,15 @@ class XmppApp(slixmpp.ClientXMPP):
             msg.reply(response).send()
 
     async def dispatch_message(self, mto, mbody, mhtml):
-        if self.muc == False and self.omemo == False:
+        if not self.muc and not self.omemo:
             self.send_message(mto=mto, mbody=mbody, mhtml=mhtml, mtype="chat")
-        elif self.muc == False and self.omemo == True:
+        elif not self.muc and self.omemo:
             await self.send_encrypted(mto=[JID(mto)], mtype="chat", body=mbody)
-        elif self.muc == True and self.omemo == False:
+        elif self.muc and not self.omemo:
             self.send_message(
                 mto=self.muc_jid, mbody=mbody, mhtml=mhtml, mtype="groupchat"
             )
-        elif self.muc == True and self.omemo == True:
+        elif self.muc and self.omemo:
             owners, admins, members, outcasts = await asyncio.gather(
                 self.plugin["xep_0045"].get_affiliation_list(self.muc_jid, "owner"),
                 self.plugin["xep_0045"].get_affiliation_list(self.muc_jid, "admin"),
