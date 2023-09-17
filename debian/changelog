@@ -1,0 +1,65 @@
+prometheus-xmpp-alerts (0.5.7-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+   + Add new dependency on python3-tz.
+  * Update standards version to 4.6.2, no changes needed.
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Sat, 11 Feb 2023 13:32:10 -0000
+
+prometheus-xmpp-alerts (0.5.3-1) unstable; urgency=medium
+
+  * Bump debhelper from old 12 to 13.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
+  * Remove obsolete fields Contact, Name from debian/upstream/metadata (already
+    present in machine-readable debian/copyright).
+  * Update standards version to 4.6.1, no changes needed.
+  * Update pattern for GitHub archive URLs from /<org>/<repo>/tags
+    page/<org>/<repo>/archive/<tag> -> /<org>/<repo>/archive/refs/tags/<tag>.
+  * New upstream release.
+   + Fixes datetime parsing. Closes: #1019414
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 12 Sep 2022 15:27:07 +0100
+
+prometheus-xmpp-alerts (0.4.2-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Depend on aiohttp rather than aiowsgi.
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Sat, 20 Jul 2019 14:23:19 +0000
+
+prometheus-xmpp-alerts (0.4.1-1) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * New upstream release.
+
+  [ Jelmer Vernooĳ ]
+  * New upstream release.
+  * Bump debhelper from old 11 to 12.
+  * Set upstream metadata fields: Contact.
+  * Bump standards version to 4.4.0 (no changes).
+  * Add autopkgtest.
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Sat, 20 Jul 2019 14:09:48 +0000
+
+prometheus-xmpp-alerts (0.3+git20190128.4c8868d-1) unstable; urgency=medium
+
+  * Fix watch file.
+  * New upstream snapshot.
+  * Add dependency on prometheus-client.
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Sun, 03 Feb 2019 02:27:42 +0000
+
+prometheus-xmpp-alerts (0.3-1) unstable; urgency=medium
+
+  * Install xmpp-alerts.yml to the right path.
+  * New upstream release.
+   + Suggests prometheus-alertmanager for amtool integration.
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 14 Jan 2019 21:50:26 +0000
+
+prometheus-xmpp-alerts (0.1-1) unstable; urgency=medium
+
+  * Initial release. (Closes: #916540)
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Sat, 03 Nov 2018 15:53:49 +0000
