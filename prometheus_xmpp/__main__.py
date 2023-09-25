@@ -137,6 +137,7 @@ class XmppApp(slixmpp.ClientXMPP):
         muc_jid=None,
         muc_bot_nick="PrometheusAlerts",
         omemo=False,
+        omemo_dir=None
     ):
         password = password_cb()
 
@@ -147,6 +148,7 @@ class XmppApp(slixmpp.ClientXMPP):
         self.muc_jid = muc_jid
         self.muc_bot_nick = muc_bot_nick
         self.omemo = omemo
+        self.omemo_dir = omemo_dir
         self.eme_ns = "eu.siacs.conversations.axolotl"  # use OMEMO
         self.auto_authorize = True
         self.add_event_handler("session_start", self.start)
@@ -162,12 +164,15 @@ class XmppApp(slixmpp.ClientXMPP):
             self.register_plugin("xep_0045")  # Multi-User Chat
         if self.omemo:
             self.register_plugin("xep_0380")  # Explicit Message Encryption
-            OMEMO_DATA_DIR = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "omemo",
-            )
-            # Ensure OMEMO data dir is created
-            os.makedirs(OMEMO_DATA_DIR, exist_ok=True)
+            if self.omemo_dir is not None:
+                OMEMO_DATA_DIR = self.omemo_dir
+            else:
+                OMEMO_DATA_DIR = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    "omemo",
+                )
+                # Ensure OMEMO data dir is created
+                os.makedirs(OMEMO_DATA_DIR, exist_ok=True)
             try:
                 self.register_plugin(
                     "xep_0384",
@@ -488,6 +493,7 @@ def main():
         config.get("muc_jid", None),
         config.get("muc_bot_nick", "PrometheusAlerts"),
         config.get("omemo", False),
+        config.get("omemo_dir", None),
     )
 
     web_app = web.Application()
