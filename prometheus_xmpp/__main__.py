@@ -135,7 +135,7 @@ class XmppApp(slixmpp.ClientXMPP):
         alertmanager_url=None,
         muc=False,
         muc_jid=None,
-        muc_bot_nick="PrometheusAlerts"
+        muc_bot_nick="PrometheusAlerts",
         omemo=False,
     ):
         password = password_cb()
