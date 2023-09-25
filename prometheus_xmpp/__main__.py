@@ -135,6 +135,7 @@ class XmppApp(slixmpp.ClientXMPP):
         alertmanager_url=None,
         muc=False,
         muc_jid=None,
+        muc_bot_nick="PrometheusAlerts"
         omemo=False,
     ):
         password = password_cb()
@@ -144,6 +145,7 @@ class XmppApp(slixmpp.ClientXMPP):
         self.alertmanager_url = alertmanager_url
         self.muc = muc
         self.muc_jid = muc_jid
+        self.muc_bot_nick = muc_bot_nick
         self.omemo = omemo
         self.eme_ns = "eu.siacs.conversations.axolotl"  # use OMEMO
         self.auto_authorize = True
@@ -191,7 +193,7 @@ class XmppApp(slixmpp.ClientXMPP):
         self.send_presence(ptype="available", pstatus="Active")
         self.get_roster()
         if self.muc:
-            self.plugin["xep_0045"].join_muc(self.muc_jid, "PrometheusAlerts")
+            self.plugin["xep_0045"].join_muc(self.muc_jid, self.muc_bot_nick)
         online_gauge.set(1)
         last_alert_message_succeeded_gauge.set(1)
 
@@ -484,6 +486,7 @@ def main():
         config.get("alertmanager_url", None),
         config.get("muc", False),
         config.get("muc_jid", None),
+        config.get("muc_bot_nick", "PrometheusAlerts"),
         config.get("omemo", False),
     )
 
