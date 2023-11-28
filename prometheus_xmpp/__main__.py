@@ -469,12 +469,10 @@ def main():
 
         def password_cb():
             return config["password"]
-
     elif config.get("password_command"):
 
         def password_cb():
             return read_password_from_command(config["password_command"])
-
     else:
 
         def password_cb():
