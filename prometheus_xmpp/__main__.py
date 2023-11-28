@@ -18,6 +18,8 @@ import socket
 import subprocess
 import sys
 import traceback
+import asyncio
+import os
 
 import slixmpp
 import yaml
@@ -34,8 +36,15 @@ from prometheus_xmpp import (
     strip_html_tags,
 )
 
-DEFAULT_CONF_PATH = "/etc/prometheus/xmpp-alerts.yml"
+from slixmpp import JID
+from slixmpp.exceptions import IqTimeout, IqError
+import slixmpp_omemo
+from slixmpp_omemo import PluginCouldNotLoad, EncryptionPrepareException
+from slixmpp_omemo import UndecidedException
+from omemo.exceptions import MissingBundleException
 
+
+DEFAULT_CONF_PATH = "/etc/prometheus/xmpp-alerts.yml"
 
 DEFAULT_HTML_TEMPLATE = """\
 {% macro color(severity) -%}
@@ -118,12 +127,29 @@ def read_password_from_command(cmd):
 
 
 class XmppApp(slixmpp.ClientXMPP):
-    def __init__(self, jid, password_cb, amtool_allowed=None, alertmanager_url=None):
+    def __init__(
+        self,
+        jid,
+        password_cb,
+        amtool_allowed=None,
+        alertmanager_url=None,
+        muc=False,
+        muc_jid=None,
+        muc_bot_nick="PrometheusAlerts",
+        omemo=False,
+        omemo_dir=None,
+    ):
         password = password_cb()
 
         slixmpp.ClientXMPP.__init__(self, jid, password)
         self._amtool_allowed = amtool_allowed or []
         self.alertmanager_url = alertmanager_url
+        self.muc = muc
+        self.muc_jid = muc_jid
+        self.muc_bot_nick = muc_bot_nick
+        self.omemo = omemo
+        self.omemo_dir = omemo_dir
+        self.eme_ns = "eu.siacs.conversations.axolotl"  # use OMEMO
         self.auto_authorize = True
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.message)
@@ -134,6 +160,30 @@ class XmppApp(slixmpp.ClientXMPP):
         self.register_plugin("xep_0004")  # Data Forms
         self.register_plugin("xep_0060")  # PubSub
         self.register_plugin("xep_0199")  # XMPP Ping
+        if self.muc:
+            self.register_plugin("xep_0045")  # Multi-User Chat
+        if self.omemo:
+            self.register_plugin("xep_0380")  # Explicit Message Encryption
+            if self.omemo_dir is not None:
+                OMEMO_DATA_DIR = self.omemo_dir
+            else:
+                OMEMO_DATA_DIR = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    "omemo",
+                )
+                # Ensure OMEMO data dir is created
+                os.makedirs(OMEMO_DATA_DIR, exist_ok=True)
+            try:
+                self.register_plugin(
+                    "xep_0384",
+                    {
+                        "data_dir": OMEMO_DATA_DIR,
+                    },
+                    module=slixmpp_omemo,
+                )  # OMEMO
+            except (PluginCouldNotLoad,):
+                print("[!] And error occured when loading the omemo plugin.")
+                sys.exit(1)
 
     def failed_auth(self, stanza):
         logging.warning("XMPP Authentication failed: %r", stanza)
@@ -147,6 +197,8 @@ class XmppApp(slixmpp.ClientXMPP):
         logging.info("Session started.")
         self.send_presence(ptype="available", pstatus="Active")
         self.get_roster()
+        if self.muc:
+            self.plugin["xep_0045"].join_muc(self.muc_jid, self.muc_bot_nick)
         online_gauge.set(1)
         last_alert_message_succeeded_gauge.set(1)
 
@@ -179,6 +231,117 @@ class XmppApp(slixmpp.ClientXMPP):
                 response = "Unknown command: %s" % args[0].lower()
             msg.reply(response).send()
 
+    async def dispatch_message(self, mto, mbody, mhtml):
+        if not self.muc and not self.omemo:
+            self.send_message(mto=mto, mbody=mbody, mhtml=mhtml, mtype="chat")
+        elif not self.muc and self.omemo:
+            await self.send_encrypted(mto=[JID(mto)], mtype="chat", body=mbody)
+        elif self.muc and not self.omemo:
+            self.send_message(
+                mto=self.muc_jid, mbody=mbody, mhtml=mhtml, mtype="groupchat"
+            )
+        elif self.muc and self.omemo:
+            owners, admins, members, outcasts = await asyncio.gather(
+                self.plugin["xep_0045"].get_affiliation_list(self.muc_jid, "owner"),
+                self.plugin["xep_0045"].get_affiliation_list(self.muc_jid, "admin"),
+                self.plugin["xep_0045"].get_affiliation_list(self.muc_jid, "member"),
+                self.plugin["xep_0045"].get_affiliation_list(self.muc_jid, "outcast"),
+                return_exceptions=True,
+            )
+            muc_affiliation = owners + admins + members + outcasts
+            recipients = [JID(nick) for nick in muc_affiliation]
+            recipients.remove(self.jid)
+            logging.debug("sending encrypted message to recipients %s", recipients)
+            await self.send_encrypted(mto=recipients, mtype="groupchat", body=mbody)
+
+    async def send_encrypted(self, mto: JID, mtype: str, body):
+        """Helper to reply with encrypted messages"""
+        if self.muc:
+            msg = self.make_message(mto=self.muc_jid, mtype=mtype)
+        else:
+            msg = self.make_message(mto=mto[0], mtype=mtype)
+
+        msg["eme"]["namespace"] = self.eme_ns
+        msg["eme"]["name"] = self["xep_0380"].mechanisms[self.eme_ns]
+
+        expect_problems = {}  # type: Optional[Dict[JID, List[int]]]
+
+        while True:
+            try:
+                # `encrypt_message` excepts the plaintext to be sent, a list of
+                # bare JIDs to encrypt to, and optionally a dict of problems to
+                # expect per bare JID.
+                #
+                # Note that this function returns an `<encrypted/>` object,
+                # and not a full Message stanza. This combined with the
+                # `recipients` parameter that requires for a list of JIDs,
+                # allows you to encrypt for 1:1 as well as groupchats (MUC).
+                #
+                # `expect_problems`: See EncryptionPrepareException handling.
+                recipients = mto
+                encrypt = await self["xep_0384"].encrypt_message(
+                    body, recipients, expect_problems
+                )
+                msg.append(encrypt)
+                return msg.send()
+            except UndecidedException as exn:
+                # The library prevents us from sending a message to an
+                # untrusted/undecided barejid, so we need to make a decision here.
+                # This is where you prompt your user to ask what to do. In
+                # this bot we will automatically trust undecided recipients.
+                logging.debug(
+                    "OMEMO: automatic addition of %s to trusted JID", exn.bare_jid
+                )
+                await self["xep_0384"].trust(exn.bare_jid, exn.device, exn.ik)
+            # TODO: catch NoEligibleDevicesException
+            except EncryptionPrepareException as exn:
+                # This exception is being raised when the library has tried
+                # all it could and doesn't know what to do anymore. It
+                # contains a list of exceptions that the user must resolve, or
+                # explicitely ignore via `expect_problems`.
+                # TODO: We might need to bail out here if errors are the same?
+                for error in exn.errors:
+                    if isinstance(error, MissingBundleException):
+                        # We choose to ignore MissingBundleException. It seems
+                        # to be somewhat accepted that it's better not to
+                        # encrypt for a device if it has problems and encrypt
+                        # for the rest, rather than error out. The "faulty"
+                        # device won't be able to decrypt and should display a
+                        # generic message. The receiving end-user at this
+                        # point can bring up the issue if it happens.
+                        if self.muc:
+                            mto = self.muc_jid
+                        self.send_message(
+                            mto,
+                            mtype,
+                            'Could not find keys for device "%d" of recipient "%s". Skipping.'
+                            % (error.device, error.bare_jid),
+                        )
+                        jid = JID(error.bare_jid)
+                        device_list = expect_problems.setdefault(jid, [])
+                        device_list.append(error.device)
+            except (IqError, IqTimeout) as exn:
+                if self.muc:
+                    mto = self.muc_jid
+                self.send_message(
+                    mto,
+                    mtype,
+                    "An error occured while fetching information on a recipient.\n%r"
+                    % exn,
+                )
+                return None
+            except Exception as exn:
+                if self.muc:
+                    mto = self.muc_jid
+                await self.send_message(
+                    mto,
+                    mtype,
+                    "An error occured while attempting to encrypt.\n%r" % exn,
+                )
+                raise
+
+        return None
+
 
 async def serve_test(request):
     xmpp_app = request.app["xmpp_app"]
@@ -186,7 +349,7 @@ async def serve_test(request):
     test_counter.inc()
     try:
         text, html = await render_alert(request.app["config"], EXAMPLE_ALERT)
-        xmpp_app.send_message(mto=to_jid, mbody=text, mhtml=html, mtype="chat")
+        await xmpp_app.dispatch_message(mto=to_jid, mbody=text, mhtml=html)
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
         logging.warning("Test alert not posted since we are not online: %s", e)
         return web.Response(body="Did not send message. Not online: %s" % e)
@@ -232,7 +395,7 @@ async def serve_alert(request):
             text, html = await render_alert(config, alert)
 
             try:
-                xmpp_app.send_message(mto=to_jid, mbody=text, mhtml=html, mtype="chat")
+                await xmpp_app.dispatch_message(mto=to_jid, mbody=text, mhtml=html)
             except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
                 logging.warning("Alert posted but we are not online: %s", e)
                 last_alert_message_succeeded_gauge.set(0)
@@ -320,6 +483,11 @@ def main():
         password_cb,
         config.get("amtool_allowed", [config["to_jid"]]),
         config.get("alertmanager_url", None),
+        config.get("muc", False),
+        config.get("muc_jid", None),
+        config.get("muc_bot_nick", "PrometheusAlerts"),
+        config.get("omemo", False),
+        config.get("omemo_dir", None),
     )
 
     web_app = web.Application()
