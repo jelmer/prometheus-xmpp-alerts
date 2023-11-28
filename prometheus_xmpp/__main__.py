@@ -137,7 +137,7 @@ class XmppApp(slixmpp.ClientXMPP):
         muc_jid=None,
         muc_bot_nick="PrometheusAlerts",
         omemo=False,
-        omemo_dir=None
+        omemo_dir=None,
     ):
         password = password_cb()
 
@@ -221,9 +221,7 @@ class XmppApp(slixmpp.ClientXMPP):
                 args[0] = args[0].lower()
                 if msg["from"].bare in self._amtool_allowed:
                     if self.alertmanager_url:
-                        args = [
-                            "--alertmanager.url",
-                            self.alertmanager_url] + args
+                        args = ["--alertmanager.url", self.alertmanager_url] + args
                     response = run_amtool(args)
                 else:
                     response = "Unauthorized JID."
@@ -253,9 +251,7 @@ class XmppApp(slixmpp.ClientXMPP):
             muc_affiliation = owners + admins + members + outcasts
             recipients = [JID(nick) for nick in muc_affiliation]
             recipients.remove(self.jid)
-            logging.debug(
-                "sending encrypted message to recipients %s",
-                recipients)
+            logging.debug("sending encrypted message to recipients %s", recipients)
             await self.send_encrypted(mto=recipients, mtype="groupchat", body=mbody)
 
     async def send_encrypted(self, mto: JID, mtype: str, body):
@@ -294,8 +290,8 @@ class XmppApp(slixmpp.ClientXMPP):
                 # This is where you prompt your user to ask what to do. In
                 # this bot we will automatically trust undecided recipients.
                 logging.debug(
-                    "OMEMO: automatic addition of %s to trusted JID",
-                    exn.bare_jid)
+                    "OMEMO: automatic addition of %s to trusted JID", exn.bare_jid
+                )
                 await self["xep_0384"].trust(exn.bare_jid, exn.device, exn.ik)
             # TODO: catch NoEligibleDevicesException
             except EncryptionPrepareException as exn:
@@ -316,8 +312,11 @@ class XmppApp(slixmpp.ClientXMPP):
                         if self.muc:
                             mto = self.muc_jid
                         self.send_message(
-                            mto, mtype, 'Could not find keys for device "%d" of recipient "%s". Skipping.' %
-                            (error.device, error.bare_jid), )
+                            mto,
+                            mtype,
+                            'Could not find keys for device "%d" of recipient "%s". Skipping.'
+                            % (error.device, error.bare_jid),
+                        )
                         jid = JID(error.bare_jid)
                         device_list = expect_problems.setdefault(jid, [])
                         device_list.append(error.device)
@@ -327,8 +326,8 @@ class XmppApp(slixmpp.ClientXMPP):
                 self.send_message(
                     mto,
                     mtype,
-                    "An error occured while fetching information on a recipient.\n%r" %
-                    exn,
+                    "An error occured while fetching information on a recipient.\n%r"
+                    % exn,
                 )
                 return None
             except Exception as exn:
@@ -400,8 +399,7 @@ async def serve_alert(request):
             except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
                 logging.warning("Alert posted but we are not online: %s", e)
                 last_alert_message_succeeded_gauge.set(0)
-                return web.Response(
-                    body="Did not send message. Not online: %s" % e)
+                return web.Response(body="Did not send message. Not online: %s" % e)
             else:
                 last_alert_message_succeeded_gauge.set(1)
                 sent += 1
@@ -455,9 +453,7 @@ def main():
     args = parser.parse_args()
 
     # Setup logging.
-    logging.basicConfig(
-        level=args.loglevel,
-        format="%(levelname)-8s %(message)s")
+    logging.basicConfig(level=args.loglevel, format="%(levelname)-8s %(message)s")
 
     with open(args.config_path) as f:
         if getattr(yaml, "FullLoader", None):
