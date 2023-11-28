@@ -20,6 +20,7 @@ import sys
 import traceback
 import asyncio
 import os
+from typing import Dict, List, Literal
 
 import slixmpp
 import yaml
@@ -254,17 +255,17 @@ class XmppApp(slixmpp.ClientXMPP):
             logging.debug("sending encrypted message to recipients %s", recipients)
             await self.send_encrypted(mto=recipients, mtype="groupchat", body=mbody)
 
-    async def send_encrypted(self, mto: JID, mtype: str, body):
+    async def send_encrypted(self, mto: JID, mtype: Literal['chat', 'error', 'groupchat', 'headline', 'normal'], body):
         """Helper to reply with encrypted messages"""
         if self.muc:
             msg = self.make_message(mto=self.muc_jid, mtype=mtype)
         else:
-            msg = self.make_message(mto=mto[0], mtype=mtype)
+            msg = self.make_message(mto=mto, mtype=mtype)
 
         msg["eme"]["namespace"] = self.eme_ns
         msg["eme"]["name"] = self["xep_0380"].mechanisms[self.eme_ns]
 
-        expect_problems = {}  # type: Optional[Dict[JID, List[int]]]
+        expect_problems: Dict[JID, List[int]] = {}
 
         while True:
             try:

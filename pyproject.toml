@@ -50,3 +50,6 @@ include-package-data = false
 
 [tool.setuptools.dynamic]
 version = {attr = "prometheus_xmpp.__version__"}
+
+[tool.mypy]
+ignore_missing_imports = true
