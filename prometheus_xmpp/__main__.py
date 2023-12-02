@@ -118,12 +118,24 @@ def read_password_from_command(cmd):
 
 
 class XmppApp(slixmpp.ClientXMPP):
-    def __init__(self, jid, password_cb, amtool_allowed=None, alertmanager_url=None):
+    def __init__(
+        self,
+        jid,
+        password_cb,
+        amtool_allowed=None,
+        alertmanager_url=None,
+        muc=False,
+        muc_jid=None,
+        muc_bot_nick="PrometheusAlerts",
+    ):
         password = password_cb()
 
         slixmpp.ClientXMPP.__init__(self, jid, password)
         self._amtool_allowed = amtool_allowed or []
         self.alertmanager_url = alertmanager_url
+        self.muc = muc
+        self.muc_jid = muc_jid
+        self.muc_bot_nick = muc_bot_nick
         self.auto_authorize = True
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.message)
@@ -134,6 +146,8 @@ class XmppApp(slixmpp.ClientXMPP):
         self.register_plugin("xep_0004")  # Data Forms
         self.register_plugin("xep_0060")  # PubSub
         self.register_plugin("xep_0199")  # XMPP Ping
+        if self.muc:
+            self.register_plugin("xep_0045")  # Multi-User Chat
 
     def failed_auth(self, stanza):
         logging.warning("XMPP Authentication failed: %r", stanza)
@@ -147,6 +161,8 @@ class XmppApp(slixmpp.ClientXMPP):
         logging.info("Session started.")
         self.send_presence(ptype="available", pstatus="Active")
         self.get_roster()
+        if self.muc:
+            self.plugin["xep_0045"].join_muc(self.muc_jid, self.muc_bot_nick)
         online_gauge.set(1)
         last_alert_message_succeeded_gauge.set(1)
 
@@ -179,6 +195,14 @@ class XmppApp(slixmpp.ClientXMPP):
                 response = "Unknown command: %s" % args[0].lower()
             msg.reply(response).send()
 
+    async def dispatch_message(self, mto, mbody, mhtml):
+        if self.muc:
+            self.send_message(
+                mto=self.muc_jid, mbody=mbody, mhtml=mhtml, mtype="groupchat"
+            )
+        else:
+            self.send_message(mto=mto, mbody=mbody, mhtml=mhtml, mtype="chat")
+
 
 async def serve_test(request):
     xmpp_app = request.app["xmpp_app"]
@@ -186,7 +210,7 @@ async def serve_test(request):
     test_counter.inc()
     try:
         text, html = await render_alert(request.app["config"], EXAMPLE_ALERT)
-        xmpp_app.send_message(mto=to_jid, mbody=text, mhtml=html, mtype="chat")
+        await xmpp_app.dispatch_message(mto=to_jid, mbody=text, mhtml=html)
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
         logging.warning("Test alert not posted since we are not online: %s", e)
         return web.Response(body="Did not send message. Not online: %s" % e)
@@ -232,7 +256,7 @@ async def serve_alert(request):
             text, html = await render_alert(config, alert)
 
             try:
-                xmpp_app.send_message(mto=to_jid, mbody=text, mhtml=html, mtype="chat")
+                await xmpp_app.dispatch_message(mto=to_jid, mbody=text, mhtml=html)
             except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
                 logging.warning("Alert posted but we are not online: %s", e)
                 last_alert_message_succeeded_gauge.set(0)
@@ -320,6 +344,9 @@ def main():
         password_cb,
         config.get("amtool_allowed", [config["to_jid"]]),
         config.get("alertmanager_url", None),
+        config.get("muc", False),
+        config.get("muc_jid", None),
+        config.get("muc_bot_nick", "PrometheusAlerts"),
     )
 
     web_app = web.Application()
