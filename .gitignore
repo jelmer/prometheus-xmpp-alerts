@@ -4,3 +4,4 @@ prometheus_xmpp_alerts.egg-info
 __pycache__
 dist
 .tox
+.mypy_cache
