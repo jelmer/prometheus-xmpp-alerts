@@ -124,18 +124,12 @@ class XmppApp(slixmpp.ClientXMPP):
         password_cb,
         amtool_allowed=None,
         alertmanager_url=None,
-        muc=False,
-        muc_jid=None,
-        muc_bot_nick="PrometheusAlerts",
     ):
         password = password_cb()
 
         slixmpp.ClientXMPP.__init__(self, jid, password)
         self._amtool_allowed = amtool_allowed or []
         self.alertmanager_url = alertmanager_url
-        self.muc = muc
-        self.muc_jid = muc_jid
-        self.muc_bot_nick = muc_bot_nick
         self.auto_authorize = True
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.message)
@@ -146,8 +140,7 @@ class XmppApp(slixmpp.ClientXMPP):
         self.register_plugin("xep_0004")  # Data Forms
         self.register_plugin("xep_0060")  # PubSub
         self.register_plugin("xep_0199")  # XMPP Ping
-        if self.muc:
-            self.register_plugin("xep_0045")  # Multi-User Chat
+        self.register_plugin("xep_0045")  # Multi-User Chat
 
     def failed_auth(self, stanza):
         logging.warning("XMPP Authentication failed: %r", stanza)
@@ -161,8 +154,6 @@ class XmppApp(slixmpp.ClientXMPP):
         logging.info("Session started.")
         self.send_presence(ptype="available", pstatus="Active")
         self.get_roster()
-        if self.muc:
-            self.plugin["xep_0045"].join_muc(self.muc_jid, self.muc_bot_nick)
         online_gauge.set(1)
         last_alert_message_succeeded_gauge.set(1)
 
@@ -195,22 +186,37 @@ class XmppApp(slixmpp.ClientXMPP):
                 response = "Unknown command: %s" % args[0].lower()
             msg.reply(response).send()
 
-    async def dispatch_message(self, mto, mbody, mhtml):
-        if self.muc:
-            self.send_message(
-                mto=self.muc_jid, mbody=mbody, mhtml=mhtml, mtype="groupchat"
-            )
+
+def dispatch_args(config, mto=None):
+    """Dispatch a message according to either the config or specified mto.
+
+    Args:
+        config: The configuration.
+        mto: The message recipient.
+    """
+    if not mto:
+        if config.get("muc", False):
+            mtype = "groupchat"
+            mto = config["muc_jid"]
         else:
-            self.send_message(mto=mto, mbody=mbody, mhtml=mhtml, mtype="chat")
+            mtype = "chat"
+            mto = config["to_jid"]
+    else:
+        if config.get("muc_jid", None) == mto:
+            mtype = "groupchat"
+        else:
+            mtype = "chat"
+    return mto, mtype
 
 
 async def serve_test(request):
     xmpp_app = request.app["xmpp_app"]
-    to_jid = request.match_info.get("to_jid", request.app["config"]["to_jid"])
+
     test_counter.inc()
     try:
         text, html = await render_alert(request.app["config"], EXAMPLE_ALERT)
-        await xmpp_app.dispatch_message(mto=to_jid, mbody=text, mhtml=html)
+        (mto, mtype) = dispatch_args(request.app["config"], request.match_info.get("to_jid"))
+        await xmpp_app.send_message(mto=mto, mbody=text, mhtml=html, mtype=mtype)
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
         logging.warning("Test alert not posted since we are not online: %s", e)
         return web.Response(body="Did not send message. Not online: %s" % e)
@@ -244,7 +250,7 @@ async def render_alert(config, alert):
 async def serve_alert(request):
     config = request.app["config"]
     xmpp_app = request.app["xmpp_app"]
-    to_jid = request.match_info.get("to_jid", config["to_jid"])
+    to_jid = request.match_info.get("to_jid")
     alert_counter.inc()
     try:
         payload = await request.json()
@@ -255,8 +261,9 @@ async def serve_alert(request):
         try:
             text, html = await render_alert(config, alert)
 
+            (mto, mtype) = dispatch_args(config, to_jid)
             try:
-                await xmpp_app.dispatch_message(mto=to_jid, mbody=text, mhtml=html)
+                await xmpp_app.send_message(mto=mto, mbody=text, mhtml=html, mtype=mtype)
             except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
                 logging.warning("Alert posted but we are not online: %s", e)
                 last_alert_message_succeeded_gauge.set(0)
@@ -344,10 +351,13 @@ def main():
         password_cb,
         config.get("amtool_allowed", [config["to_jid"]]),
         config.get("alertmanager_url", None),
-        config.get("muc", False),
-        config.get("muc_jid", None),
-        config.get("muc_bot_nick", "PrometheusAlerts"),
     )
+
+
+    if config.get("muc", False):
+        muc_jid = config.get("muc_jid")
+        muc_bot_nick = config.get("muc_bot_nick", "PrometheusAlerts")
+        xmpp_app.plugin["xep_0045"].join_muc(muc_jid, muc_bot_nick)
 
     web_app = web.Application()
     web_app["config"] = config
