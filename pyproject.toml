@@ -43,7 +43,7 @@ prometheus-xmpp-alerts = "prometheus_xmpp.__main__:main"
 
 [project.optional-dependencies]
 testing = ["pytz"]
-dev = ["ruff==0.4.4"]
+dev = ["ruff==0.4.5"]
 
 [tool.setuptools]
 packages = ["prometheus_xmpp"]
