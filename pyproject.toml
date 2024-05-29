@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "prometheus-xmpp-alerts"
 authors = [{name = "Jelmer Vernooij", email = "jelmer@jelmer.uk"}]
 description = "Prometheus XMPP Alerts hook"
+readme = "README.md"
 license = {text = "Apachev2"}
 keywords = ["prometheus xmpp jabber"]
 classifiers = [
