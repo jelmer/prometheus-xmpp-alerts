@@ -12,59 +12,62 @@
 # $ python3 prometheus-xmpp-alerts --config=xmpp-alerts.yml.example
 
 import json
-import re
-from datetime import datetime
 import logging
+import re
 import subprocess
 import traceback
+from datetime import datetime
 
-
-__version__ = (0, 5, 6)
-version_string = '.'.join(map(str, __version__))
+__version__ = (0, 5, 8)
+version_string = ".".join(map(str, __version__))
 
 
 def parse_timestring(ts):
     # strptime doesn't understand nanoseconds, so discard the last three digits
-    ts = re.sub(r'\.([0-9]{6})([0-9]*)([^0-9])', r'.\1\3', ts)
-    return datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S.%f%z')
+    ts = re.sub(r"\.([0-9]{6})([0-9]*)([^0-9])", r".\1\3", ts)
+    return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%f%z")
 
 
 def strip_html_tags(html):
     from bs4 import BeautifulSoup
+
     soup = BeautifulSoup(html, features="html.parser")
     return soup.get_text()
 
 
 def render_text_template(template, alert):
     from jinja2 import Template, TemplateError
+
     try:
         return Template(template, autoescape=False).render(
             **alert, parse_time=parse_timestring)
     except TemplateError as e:
         traceback.print_exc()
-        logging.warning(
-            'Alert that failed to render: \n' + json.dumps(alert, indent=4))
+        logging.warning("Alert that failed to render: \n" + json.dumps(alert, indent=4))
         return "Failed to render text template with jinja2: %s" % e.message
 
 
 def render_html_template(template, alert):
-    from jinja2 import Template, TemplateError
     from xml.etree import ElementTree as ET
+
+    from jinja2 import Template, TemplateError
+
     try:
         output = Template(template).render(**alert)
     except TemplateError as e:
         traceback.print_exc()
-        logging.warning(
-            'Alert that failed to render: \n' + json.dumps(alert, indent=4))
-        return (f"Failed to render HTML template <code>{template}</code> "
-                f"with jinja2: <code>{e.message}</code>")
+        logging.warning("Alert that failed to render: \n" + json.dumps(alert, indent=4))
+        return (
+            f"Failed to render HTML template <code>{template}</code> "
+            f"with jinja2: <code>{e.message}</code>"
+        )
     try:
-        full = '<body>%s</body>' % output
+        full = "<body>%s</body>" % output
         ET.fromstring(full)
     except ET.ParseError as e:
         import html
-        return (f"Failed to render HTML: {e} "
-                f"in <code>{html.escape(full)}</code>")
+
+        return f"Failed to render HTML: {e} " f"in <code>{html.escape(full)}</code>"
     return output
 
 
@@ -73,6 +76,10 @@ def run_amtool(args):
     # TODO(jelmer): Support setting the current user, e.g. for silence
     # ownership.
     ret = subprocess.run(
-        ["amtool"] + args, shell=False, text=True,
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        ["amtool"] + args,
+        shell=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
     return ret.stdout

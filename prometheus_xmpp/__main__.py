@@ -10,33 +10,30 @@
 #
 # Edit xmpp-alerts.yml.example, then run:
 # $ python3 prometheus-xmpp-alerts --config=xmpp-alerts.yml.example
-import subprocess
 import argparse
 import json
 import logging
+import os
 import shlex
 import socket
+import subprocess
 import sys
 import traceback
 
 import slixmpp
 import yaml
 from aiohttp import web
-from aiohttp_openmetrics import (
-    Counter,
-    Gauge,
-    metrics as serve_metrics,
-)
+from aiohttp_openmetrics import Counter, Gauge
+from aiohttp_openmetrics import metrics as serve_metrics
 
 from prometheus_xmpp import (
-    render_text_template,
     render_html_template,
+    render_text_template,
     run_amtool,
     strip_html_tags,
 )
 
-
-DEFAULT_CONF_PATH = '/etc/prometheus/xmpp-alerts.yml'
+DEFAULT_CONF_PATH = "/etc/prometheus/xmpp-alerts.yml"
 
 
 DEFAULT_HTML_TEMPLATE = """\
@@ -94,31 +91,32 @@ DEPRECATED_TEXT_TEMPLATE_FULL = """\
 
 
 EXAMPLE_ALERT = {
-  "status": "firing",
-  "labels": {
-    "alertname": "Test",
-    "instance": "localhost:1337",
-  },
-  "annotations": {
-    "description": (
-        "normally there would be details\n"
-        "in this multi-line description"),
-    "summary": "summary for a test alert",
-  },
-  "startsAt": "2022-08-01T09:52:26.739266927+01:00",
-  "endsAt": "0001-01-01T00:00:00Z",
-  "generatorURL": "http://example.com:9090/graph?g0.expr=someexpr"
+    "status": "firing",
+    "labels": {
+        "alertname": "Test",
+        "instance": "localhost:1337",
+    },
+    "annotations": {
+        "description": (
+            "normally there would be details\n" "in this multi-line description"
+        ),
+        "summary": "summary for a test alert",
+    },
+    "startsAt": "2022-08-01T09:52:26.739266927+01:00",
+    "endsAt": "0001-01-01T00:00:00Z",
+    "generatorURL": "http://example.com:9090/graph?g0.expr=someexpr",
 }
 
 
-alert_counter = Counter('alert_count', 'Total number of alerts delivered')
-test_counter = Counter('test_count', 'Total number of test alerts delivered')
+alert_counter = Counter("alert_count", "Total number of alerts delivered")
+test_counter = Counter("test_count", "Total number of test alerts delivered")
 xmpp_message_counter = Counter(
-    'xmpp_message_count', 'Total number of XMPP messages received.')
-online_gauge = Gauge(
-    'xmpp_online', 'Connected to XMPP server.')
+    "xmpp_message_count", "Total number of XMPP messages received."
+)
+online_gauge = Gauge("xmpp_online", "Connected to XMPP server.")
 last_alert_message_succeeded_gauge = Gauge(
-    'last_alert_message_succeeded', 'Last alert message succeeded.')
+    "last_alert_message_succeeded", "Last alert message succeeded."
+)
 
 
 def read_password_from_command(cmd):
@@ -127,18 +125,21 @@ def read_password_from_command(cmd):
     Args:
         cmd: The command that should be executed.
     """
-    out = subprocess.check_output(cmd, shell=True).decode('utf-8')
-    lines = out.split('\n')
+    out = subprocess.check_output(cmd, shell=True).decode("utf-8")
+    lines = out.split("\n")
     first_line = lines[0]
 
     return first_line.strip()
 
 
 class XmppApp(slixmpp.ClientXMPP):
-
-    def __init__(self, jid, password_cb,
-                 amtool_allowed=None, alertmanager_url=None):
-
+    def __init__(
+        self,
+        jid,
+        password_cb,
+        amtool_allowed=None,
+        alertmanager_url=None,
+    ):
         password = password_cb()
 
         slixmpp.ClientXMPP.__init__(self, jid, password)
@@ -149,11 +150,12 @@ class XmppApp(slixmpp.ClientXMPP):
         self.add_event_handler("message", self.message)
         self.add_event_handler("disconnected", self.lost)
         self.add_event_handler("failed_auth", self.failed_auth)
-        self.register_plugin('xep_0071')  # XHTML-IM
-        self.register_plugin('xep_0030')  # Service Discovery
-        self.register_plugin('xep_0004')  # Data Forms
-        self.register_plugin('xep_0060')  # PubSub
-        self.register_plugin('xep_0199')  # XMPP Ping
+        self.register_plugin("xep_0071")  # XHTML-IM
+        self.register_plugin("xep_0030")  # Service Discovery
+        self.register_plugin("xep_0004")  # Data Forms
+        self.register_plugin("xep_0060")  # PubSub
+        self.register_plugin("xep_0199")  # XMPP Ping
+        self.register_plugin("xep_0045")  # Multi-User Chat
 
     def failed_auth(self, stanza):
         logging.warning("XMPP Authentication failed: %r", stanza)
@@ -165,7 +167,7 @@ class XmppApp(slixmpp.ClientXMPP):
           event: Event data (empty)
         """
         logging.info("Session started.")
-        self.send_presence(ptype='available', pstatus='Active')
+        self.send_presence(ptype="available", pstatus="Active")
         self.get_roster()
         online_gauge.set(1)
         last_alert_message_succeeded_gauge.set(1)
@@ -181,20 +183,19 @@ class XmppApp(slixmpp.ClientXMPP):
         Args:
             msg: The received message stanza.
         """
-        if msg['type'] in ('chat', 'normal'):
-            args = shlex.split(msg['body'])
+        if msg["type"] in ("chat", "normal"):
+            args = shlex.split(msg["body"])
             if args == []:
                 response = "No command specified"
-            elif args[0].lower() in ('alert', 'silence'):
+            elif args[0].lower() in ("alert", "silence"):
                 args[0] = args[0].lower()
-                if msg['from'].bare in self._amtool_allowed:
+                if msg["from"].bare in self._amtool_allowed:
                     if self.alertmanager_url:
-                        args = [
-                            '--alertmanager.url', self.alertmanager_url] + args
+                        args = ["--alertmanager.url", self.alertmanager_url] + args
                     response = run_amtool(args)
                 else:
                     response = "Unauthorized JID."
-            elif args[0].lower() == 'help':
+            elif args[0].lower() == "help":
                 response = "Supported commands: help, alert, silence."
             else:
                 response = "Unknown command: %s" % args[0].lower()
@@ -220,11 +221,10 @@ async def serve_test(request):
                 mhtml=html,
                 mtype='chat')
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
-        logging.warning('Test alert not posted since we are not online: %s', e)
-        return web.Response(
-            body='Did not send message. Not online: %s' % e)
+        logging.warning("Test alert not posted since we are not online: %s", e)
+        return web.Response(body="Did not send message. Not online: %s" % e)
     else:
-        return web.Response(body='Sent message.')
+        return web.Response(body="Sent message.")
 
 
 async def render_alert(text_template, html_template, alert):
@@ -243,33 +243,36 @@ async def render_alert(text_template, html_template, alert):
 async def serve_alert(request):
     xmpp_app = request.app['xmpp_app']
     try:
-        recipients = [request.match_info['to_jid']]
+        recipients = [(request.match_info['to_jid'], 'chat')]
     except KeyError:
-        recipients = request.app['recipients']
+        try:
+            recipients = [(jid, 'chat') for jid in request.app['recipients']]
+        except KeyError:
+            recipients = [(request.app['muc_jid'], 'groupchat')]
+
     alert_counter.inc()
     try:
         payload = await request.json()
     except json.decoder.JSONDecodeError as e:
         raise web.HTTPUnprocessableEntity(text=str(e))
     sent = 0
-    for alert in payload['alerts']:
+    for alert in payload["alerts"]:
         try:
             text, html = await render_alert(
                 request.app['text_template'], request.app['html_template'],
                 alert)
 
             try:
-                for to_jid in recipients:
+                for (mto, mtype) in recipients:
                     xmpp_app.send_message(
-                            mto=to_jid,
+                            mto=mto,
                             mbody=text,
                             mhtml=html,
-                            mtype='chat')
+                            mtype=mtype)
             except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
-                logging.warning('Alert posted but we are not online: %s', e)
+                logging.warning("Alert posted but we are not online: %s", e)
                 last_alert_message_succeeded_gauge.set(0)
-                return web.Response(
-                    body='Did not send message. Not online: %s' % e)
+                return web.Response(body="Did not send message. Not online: %s" % e)
             else:
                 last_alert_message_succeeded_gauge.set(1)
                 sent += 1
@@ -277,18 +280,19 @@ async def serve_alert(request):
             last_alert_message_succeeded_gauge.set(0)
             traceback.print_exc()
             raise web.HTTPInternalServerError(
-                text='failed to sent some messages: %s' % e)
-    return web.Response(body='Sent %d messages' % sent)
+                text="failed to sent some messages: %s" % e
+            )
+    return web.Response(body="Sent %d messages" % sent)
 
 
 async def serve_health(request):
-    if not request.app['xmpp_app'].authenticated:
-        return web.Response(status=500, text='not authenticated to server')
-    return web.Response(body=b'ok')
+    if not request.app["xmpp_app"].authenticated:
+        return web.Response(status=500, text="not authenticated to server")
+    return web.Response(body=b"ok")
 
 
 async def serve_root(request):
-    return web.Response(body='See /test, /health, /alert or /metrics')
+    return web.Response(body="See /test, /health, /alert or /metrics")
 
 
 def main():
@@ -309,15 +313,14 @@ def main():
     args = parser.parse_args()
 
     # Setup logging.
-    logging.basicConfig(
-        level=args.loglevel, format='%(levelname)-8s %(message)s')
+    logging.basicConfig(level=args.loglevel, format="%(levelname)-8s %(message)s")
 
     if not args.config_path and args.optional_config_path:
         if os.path.isfile(args.optional_config_path):
             args.config_path = args.optional_config_path
 
     with open(args.config_path) as f:
-        if getattr(yaml, 'FullLoader', None):
+        if getattr(yaml, "FullLoader", None):
             config = yaml.load(f, Loader=yaml.FullLoader)  # type: ignore
         else:
             # Backwards compatibility with older versions of Python
@@ -337,12 +340,15 @@ def main():
         def password_cb():
             return os.environ['XMPP_PASS']
     elif config.get('password'):
+
         def password_cb():
-            return config['password']
-    elif config.get('password_command'):
+            return config["password"]
+    elif config.get("password_command"):
+
         def password_cb():
-            return read_password_from_command(config['password_command'])
+            return read_password_from_command(config["password_command"])
     else:
+
         def password_cb():
             return None
 
@@ -384,7 +390,6 @@ def main():
         html_template = config['html_template']
 
     if not text_template and not html_template and 'format' in config:
-        html = None
         if config['format'] == 'full':
             text_template = DEPRECATED_TEXT_TEMPLATE_FULL
         elif config['format'] == 'short':
@@ -392,11 +397,24 @@ def main():
         else:
             parser.error("unsupport config format: %s" % config['format'])
 
+    muc_jid = os.environ.get('MUC_JID')
+    if not muc_jid and 'muc_jid' in config:
+        muc_jid = config['muc_jid']
+
+    if muc_jid:
+        muc_bot_nick = os.environ.get('MUC_BOT_NICK')
+        if not muc_bot_nick and 'muc_bot_nick' in config:
+            muc_bot_nick = config.get("muc_bot_nick")
+        if not muc_bot_nick:
+            muc_bot_nick = "PrometheusAlerts"
+        xmpp_app.plugin["xep_0045"].join_muc(muc_jid, muc_bot_nick)
+
     web_app = web.Application()
     web_app['text_template'] = text_template
     web_app['html_template'] = html_template
     web_app['recipients'] = recipients
     web_app['xmpp_app'] = xmpp_app
+    web_app['muc_jid'] = muc_jid
     web_app.add_routes([
         web.get('/', serve_root),
         web.get('/test', serve_test),
@@ -431,5 +449,5 @@ def main():
         loop=xmpp_app.loop)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
