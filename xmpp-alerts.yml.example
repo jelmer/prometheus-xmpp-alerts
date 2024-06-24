@@ -10,6 +10,10 @@ to_jid: 'jelmer@example.com'
 # List of JIDs that are allowed to query alerts and set silences. Defaults to
 # to_jid.
 amtool_allowed: []
+# to activate MUC (groupchat message)
+# muc: yes
+# muc_jid: "example@groups.domain.com"
+# muc_bot_nick: "PrometheusAlerts"
 
 # HTML message template as jinja2:
 # html_template: |

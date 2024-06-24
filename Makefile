@@ -1,17 +1,17 @@
 PYTHON = python3
 
-all: check flake8
+all: check ruff
 
 check:
 	$(PYTHON) -m unittest tests.test_suite
 
-flake8:
-	flake8 prometheus_xmpp/
+ruff:
+	ruff check .
 
 typing:
 	mypy prometheus_xmpp/
 
-.PHONY: all flake8 check
+.PHONY: all ruff check
 
 docker:
 	buildah build -t docker.io/jvernooij/prometheus-xmpp-alerts -t ghcr.io/jelmer/prometheus-xmpp-alerts .
