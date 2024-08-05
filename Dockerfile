@@ -8,4 +8,4 @@ RUN pip3 install --break-system-packages .
 
 EXPOSE 9199
 
-CMD ["/usr/bin/python3", "-m", "prometheus_xmpp", "--config", "/config.yaml"]
+CMD ["/usr/bin/python3", "-m", "prometheus_xmpp", "--optional-config", "/config.yaml"]

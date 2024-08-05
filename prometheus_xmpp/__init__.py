@@ -28,47 +28,6 @@ def parse_timestring(ts):
     return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%f%z")
 
 
-def create_message_short(message):
-    """Create the short form message to deliver."""
-    for alert in message["alerts"]:
-        try:
-            summary = alert["annotations"]["summary"]
-        except KeyError:
-            summary = alert["labels"]["alertname"]
-        yield "{}, {}, {}".format(
-            alert["status"].upper(),
-            parse_timestring(alert["startsAt"]).isoformat(timespec="seconds"),
-            summary,
-        )
-
-
-def create_message_full(message):
-    """Create the long form message to deliver."""
-    group_labels = ""
-    if "groupLabels" in message:
-        group_labels = " ({})".format(
-            " ".join(value for key, value in message["groupLabels"].items())
-        )
-
-    for alert in message["alerts"]:
-        description = ""
-        if "description" in alert["annotations"]:
-            description = "\n{}".format(alert["annotations"]["description"])
-
-        labels = ""
-        if "labels" in alert:
-            for label, value in alert["labels"].items():
-                labels += f"\n*{label}:* {value}"
-
-        try:
-            summary = alert["annotations"]["summary"]
-        except KeyError:
-            summary = alert["labels"]["alertname"]
-        yield "*[{}] {}*{}{}{}".format(
-            alert["status"].upper(), summary, group_labels, description, labels
-        )
-
-
 def strip_html_tags(html):
     from bs4 import BeautifulSoup
 
@@ -80,7 +39,8 @@ def render_text_template(template, alert):
     from jinja2 import Template, TemplateError
 
     try:
-        return Template(template, autoescape=False).render(**alert)
+        return Template(template, autoescape=False).render(
+            **alert, parse_time=parse_timestring)
     except TemplateError as e:
         traceback.print_exc()
         logging.warning("Alert that failed to render: \n" + json.dumps(alert, indent=4))

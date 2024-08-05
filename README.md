@@ -27,11 +27,25 @@ to_jid: 'jelmer@example.com'
 listen_address: '192.168.2.1'
 listen_port: 9199
 
-# Text message template as jinja2; defaults to html_template with tags stripped.
+# Text message template as jinja2; defaults to html_template with tags stripped (optional)
 text_template: |
  {{ status.upper() }}: *{{ labels.alertname }}* at {{ labels.host or labels.instance }}:\
  {{ annotations.message }}. {{ generatorURL }}
 ```
+
+You can also set the following environment variables instead:
+
+* ``XMPP_ID`` - XMPP JID
+* ``XMPP_PASS`` - Password
+* ``XMPP_RECIPIENTS`` - comma-separated list of recipients
+
+* ``XMPP_AMTOOL_ALLOWED`` - comma-separated list of users (optional)
+
+* ``WEBHOOK_HOST`` - Address to listen on (optional)
+* ``WEBHOOK_PORT`` - Port to listen on (optional)
+
+* ``TEXT_TEMPLATE`` - Template for text messages (see above, optional)
+* ``HTML_TEMPALTE`` - Template for HTML messages (see above, optional)
 
 And run the web hook::
 
@@ -40,7 +54,7 @@ $ python3 -m prometheus_xmpp --config=/etc/prometheus/xmpp-alerts.yaml
 ```
 
 If you have [amtool](https://github.com/prometheus/alertmanager#amtool) set up,
-then you can also allow ``to_jid`` to see existing alerts and manage silences.
+then you can also allow users to see existing alerts and manage silences.
 Set the ``amtool_allowed`` option to JIDs that are allowed to use amtool.
 
 Docker file
@@ -48,7 +62,7 @@ Docker file
 
 You can build your own docker images using the Dockerfile in this directory, or
 use ``ghcr.io/jelmer/prometheus-xmpp-alerts``. Provide your configuration in
-``/config.yaml``.
+``/config.yaml`` or through environment variables.
 
 Message Format
 --------------
