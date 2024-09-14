@@ -84,7 +84,8 @@ class ParseTimestringTests(unittest.TestCase):
         )
 
 
+
 def test_suite():
-    module_names = ["tests"]
+    module_names = ["tests", "tests.test_main"]
     loader = unittest.TestLoader()
     return loader.loadTestsFromNames(module_names)
