@@ -208,6 +208,12 @@ async def serve_test(request):
         recipients = [request.match_info['to_jid']]
     except KeyError:
         recipients = request.app['recipients']
+    if not recipients:
+        return web.Response(
+            status=500,
+            text="No recipients configured. Set `recipients` in configuration, `XMPP_RECIPIENTS` in environment or use /test/TO_JID.",
+        )
+
     test_counter.inc()
     try:
         text, html = await render_alert(
