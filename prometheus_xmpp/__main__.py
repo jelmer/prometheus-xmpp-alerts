@@ -314,14 +314,14 @@ async def serve_root(request):
         body=INDEX)
 
 
-def main():
+def parse_args(argv=None, env=os.environ):
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', dest='config_path',
                         type=str, default=None,
                         help='Path to configuration file.')
     parser.add_argument('--optional-config', dest='optional_config_path',
                         type=str, default=DEFAULT_CONF_PATH,
-                        help=argparse.HIDDEN)
+                        help=argparse.SUPPRESS)
     parser.add_argument("-q", "--quiet", help="set logging to ERROR",
                         action="store_const", dest="loglevel",
                         const=logging.ERROR, default=logging.INFO)
@@ -329,7 +329,7 @@ def main():
                         action="store_const", dest="loglevel",
                         const=logging.DEBUG, default=logging.INFO)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     # Setup logging.
     logging.basicConfig(level=args.loglevel, format="%(levelname)-8s %(message)s")
@@ -338,26 +338,29 @@ def main():
         if os.path.isfile(args.optional_config_path):
             args.config_path = args.optional_config_path
 
-    with open(args.config_path) as f:
-        if getattr(yaml, "FullLoader", None):
-            config = yaml.load(f, Loader=yaml.FullLoader)  # type: ignore
-        else:
-            # Backwards compatibility with older versions of Python
-            config = yaml.load(f)  # type: ignore
+    if args.config_path:
+        with open(args.config_path) as f:
+            if getattr(yaml, "FullLoader", None):
+                config = yaml.load(f, Loader=yaml.FullLoader)  # type: ignore
+            else:
+                # Backwards compatibility with older versions of Python
+                config = yaml.load(f)  # type: ignore
+    else:
+        config = {}
 
-    if 'XMPP_ID' in os.environ:
-        jid = os.environ['XMPP_ID']
+    if 'XMPP_ID' in env:
+        jid = env['XMPP_ID']
     elif 'jid' in config:
         jid = config['jid']
     else:
-        parser.error('no jid set in configuration or environment')
+        parser.error('no jid set in configuration (`jid`) or environment (`XMPP_ID`)')
 
     hostname = socket.gethostname()
     jid = "{}/{}".format(jid, hostname)
 
-    if 'XMPP_PASS' in os.environ:
+    if 'XMPP_PASS' in env:
         def password_cb():
-            return os.environ['XMPP_PASS']
+            return env['XMPP_PASS']
     elif config.get('password'):
 
         def password_cb():
@@ -371,27 +374,51 @@ def main():
         def password_cb():
             return None
 
-    if 'XMPP_RECIPIENTS' in os.environ:
-        recipients = os.environ['XMPP_RECIPIENTS'].split(',')
+    if 'XMPP_RECIPIENTS' in env:
+        recipients = env['XMPP_RECIPIENTS'].split(',')
     elif 'recipients' in config:
         recipients = config['recipients']
+        if not isinstance(recipients, list):
+            recipients = [recipients]
     elif 'to_jid' in config:
-        recipients = config['to_jid']
+        recipients = [config['to_jid']]
     else:
         parser.error(
-            'no recipients specified in configuration or environment')
+            'no recipients specified in configuration (`recipients` or `to_jid`) or environment (`XMPP_RECIPIENTS`)')
 
-    if 'XMPP_AMTOOL_ALLOWED' in os.environ:
-        amtool_allowed = os.environ['XMPP_AMTOOL_ALLOWED'].split(',')
+    if 'XMPP_AMTOOL_ALLOWED' in env:
+        amtool_allowed = env['XMPP_AMTOOL_ALLOWED'].split(',')
+        config['amtool_allowed'] = amtool_allowed
     elif 'amtool_allowed' in config:
-        amtool_allowed = config['amtool_allowed']
+        if not isinstance(config['amtool_allowed'], list):
+            config['amtool_allowed'] = [config['amtool_allowed']]
     else:
-        amtool_allowed = list(recipients)
+        config['amtool_allowed'] = list(recipients)
 
-    if 'ALERTMANAGER_URL' in os.environ:
-        alertmanager_url = os.environ['ALERTMANAGER_URL']
-    else:
-        alertmanager_url = config.get('alertmanager_url')
+    if 'ALERTMANAGER_URL' in env:
+        config['alertmanager_url'] = env['ALERTMANAGER_URL']
+
+    if config.get('format') not in ('full', 'short', None):
+        parser.error("unsupport config format: %s" % config['format'])
+
+    return (
+        jid,
+        password_cb,
+        recipients,
+        config,
+    )
+
+
+def main():
+    (
+        jid,
+        password_cb,
+        recipients,
+        config,
+    ) = parse_args()
+
+    amtool_allowed = config.get('amtool_allowed')
+    alertmanager_url = config.get('alertmanager_url')
 
     xmpp_app = XmppApp(
         jid, password_cb,
@@ -413,8 +440,6 @@ def main():
             text_template = DEPRECATED_TEXT_TEMPLATE_FULL
         elif config['format'] == 'short':
             text_template = DEPRECATED_TEXT_TEMPLATE_SHORT
-        else:
-            parser.error("unsupport config format: %s" % config['format'])
 
     muc_jid = os.environ.get('MUC_JID')
     if not muc_jid and 'muc_jid' in config:
