@@ -250,6 +250,11 @@ async def serve_alert(request):
         except KeyError:
             recipients = [(request.app['muc_jid'], 'groupchat')]
 
+    if request.content_type != "application/json":
+        raise web.HTTPUnsupportedMediaType(
+            text="Expected Content-Type: application/json"
+        )
+
     alert_counter.inc()
     try:
         payload = await request.json()
@@ -291,8 +296,22 @@ async def serve_health(request):
     return web.Response(body=b"ok")
 
 
+INDEX = """\
+<html>
+<head>
+  <title>prometheus-xmpp alerts</title>
+</head>
+<body>
+See <a href="/test">/test</a>, <a href="/health">/health</a>, <a href="/alert">/alert</a> or <a href="/metrics">/metrics</a>.
+</body>
+</html>
+"""
+
+
 async def serve_root(request):
-    return web.Response(body="See /test, /health, /alert or /metrics")
+    return web.Response(
+        content_type="text/html",
+        body=INDEX)
 
 
 def main():
