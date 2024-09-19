@@ -14,6 +14,9 @@ amtool_allowed: []
 # muc: yes
 # muc_jid: "example@groups.domain.com"
 # muc_bot_nick: "PrometheusAlerts"
+# omemo: yes
+# json file to store the private key of the bot and the publics keys of the clients
+# omemo_keys: "/restricted_directory/prometheus_bot.json"
 
 # HTML message template as jinja2:
 # html_template: |

@@ -24,6 +24,7 @@ classifiers = [
 requires-python = ">= 3.8"
 dependencies = [
     "slixmpp",
+    "slixmpp_omemo",
     "aiohttp",
     "pytz",
     "pyyaml",
