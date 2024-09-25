@@ -212,9 +212,7 @@ class XmppApp(slixmpp.ClientXMPP):
 
 
     async def send_encrypted_message(self, mto, mtype, mbody, mhtml):
-        # TODO if mhtml ==> Stanza mhzml
-        msg_stanza = self.make_message(mto=mto, mtype=mtype)
-        msg_stanza["body"] = mbody
+        msg_stanza = self.make_message(mto=mto, mbody=mbody, mtype=mtype, mhtml=mhtml)
         msg_stanza.set_to(mto)
         msg_stanza.set_from(self.boundjid)
 
