@@ -240,6 +240,7 @@ async def render_alert(text_template, html_template, alert):
             text = strip_html_tags(html)
     elif text_template:
         text = render_text_template(text_template, alert)
+        html = None
     else:
         text = render_text_template(DEFAULT_TEXT_TEMPLATE, alert)
         html = render_html_template(DEFAULT_HTML_TEMPLATE, alert)
