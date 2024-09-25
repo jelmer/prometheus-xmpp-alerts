@@ -19,6 +19,7 @@ import socket
 import subprocess
 import sys
 import traceback
+from typing import Optional, Tuple
 
 import slixmpp
 import yaml
@@ -233,11 +234,15 @@ async def serve_test(request):
         return web.Response(body="Sent message.")
 
 
-async def render_alert(text_template, html_template, alert):
+async def render_alert(text_template: Optional[str], html_template: Optional[str], alert) -> Tuple[str, Optional[str]]:
+    text: str
+    html: Optional[str]
     if html_template:
         html = render_html_template(html_template, alert)
         if not text_template:
             text = strip_html_tags(html)
+        else:
+            text = render_text_template(text_template, alert)
     elif text_template:
         text = render_text_template(text_template, alert)
         html = None
