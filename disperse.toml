@@ -1,0 +1,8 @@
+tag-name = "v$VERSION"
+tarball-location = []
+release-timeout = 5
+
+[[update_version]]
+path = "prometheus_xmpp/__init__.py"
+match = "^__version__ = ((.*))$"
+new-line = "__version__ = $TUPLED_VERSION"
