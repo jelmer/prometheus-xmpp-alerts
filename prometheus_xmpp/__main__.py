@@ -411,7 +411,7 @@ def parse_args(argv=None, env=os.environ):
         config['alertmanager_url'] = env['ALERTMANAGER_URL']
 
     if config.get('format') not in ('full', 'short', None):
-        parser.error("unsupport config format: %s" % config['format'])
+        parser.error("unsupported config format: %s" % config['format'])
 
     return (
         jid,
