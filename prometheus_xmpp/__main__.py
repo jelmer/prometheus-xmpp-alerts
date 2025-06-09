@@ -22,6 +22,8 @@ import traceback
 from typing import Optional, Tuple
 
 import slixmpp
+from slixmpp.jid import JID
+from prometheus_xmpp import omemo_plugin
 import yaml
 from aiohttp import web
 from aiohttp_openmetrics import Counter, Gauge
@@ -140,6 +142,8 @@ class XmppApp(slixmpp.ClientXMPP):
         password_cb,
         amtool_allowed=None,
         alertmanager_url=None,
+        omemo=False,
+        omemo_keys=None
     ):
         password = password_cb()
 
@@ -147,6 +151,7 @@ class XmppApp(slixmpp.ClientXMPP):
         self._amtool_allowed = amtool_allowed or []
         self.alertmanager_url = alertmanager_url
         self.auto_authorize = True
+        self.omemo = omemo
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.message)
         self.add_event_handler("disconnected", self.lost)
@@ -157,6 +162,9 @@ class XmppApp(slixmpp.ClientXMPP):
         self.register_plugin("xep_0060")  # PubSub
         self.register_plugin("xep_0199")  # XMPP Ping
         self.register_plugin("xep_0045")  # Multi-User Chat
+        if self.omemo:
+            self.register_plugin("xep_0380")  # Explicit Message Encryption
+            self.register_plugin("xep_0384", pconfig={"storage": omemo_keys}, module=omemo_plugin)  # OMEMO
 
     def failed_auth(self, stanza):
         logging.warning("XMPP Authentication failed: %r", stanza)
@@ -203,6 +211,25 @@ class XmppApp(slixmpp.ClientXMPP):
             msg.reply(response).send()
 
 
+    async def send_encrypted_message(self, mto, mtype, mbody, mhtml):
+        msg_stanza = self.make_message(mto=mto, mbody=mbody, mtype=mtype, mhtml=mhtml)
+        msg_stanza.set_to(mto)
+        msg_stanza.set_from(self.boundjid)
+
+        messages, encryption_errors = await self["xep_0384"].encrypt_message(
+            msg_stanza, mto
+        )
+        if len(encryption_errors) > 0:
+            logging.info(
+                f"There were non-critical errors during encryption: {encryption_errors}"
+            )
+
+        for namespace, message in messages.items():
+            message["eme"]["namespace"] = namespace
+            message["eme"]["name"] = self["xep_0380"].mechanisms[namespace]
+            message.send()
+
+
 async def serve_test(request):
     xmpp_app = request.app['xmpp_app']
     try:
@@ -222,11 +249,18 @@ async def serve_test(request):
             request.app['html_template'],
             EXAMPLE_ALERT)
         for to_jid in recipients:
-            xmpp_app.send_message(
-                mto=to_jid,
-                mbody=text,
-                mhtml=html,
-                mtype='chat')
+            if xmpp_app.omemo:
+                await xmpp_app.send_encrypted_message(
+                    mto=JID(to_jid),
+                    mbody=text,
+                    mhtml=html,
+                    mtype="chat")
+            else:
+                xmpp_app.send_message(
+                    mto=to_jid,
+                    mbody=text,
+                    mhtml=html,
+                    mtype='chat')
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
         logging.warning("Test alert not posted since we are not online: %s", e)
         return web.Response(body="Did not send message. Not online: %s" % e)
@@ -281,11 +315,18 @@ async def serve_alert(request):
 
             try:
                 for (mto, mtype) in recipients:
-                    xmpp_app.send_message(
-                            mto=mto,
+                    if xmpp_app.omemo:
+                        await xmpp_app.send_encrypted_message(
+                            mto=JID(mto),
                             mbody=text,
                             mhtml=html,
                             mtype=mtype)
+                    else:
+                        xmpp_app.send_message(
+                                mto=mto,
+                                mbody=text,
+                                mhtml=html,
+                                mtype=mtype)
             except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
                 logging.warning("Alert posted but we are not online: %s", e)
                 last_alert_message_succeeded_gauge.set(0)
@@ -413,6 +454,16 @@ def parse_args(argv=None, env=os.environ):
     if config.get('format') not in ('full', 'short', None):
         parser.error("unsupported config format: %s" % config['format'])
 
+    if 'OMEMO' in env:
+        config['omemo'] = env['OMEMO']
+    elif 'omemo' not in config:
+        config['omemo'] = False
+
+    if 'OMEMO_KEYS' in env:
+        config['omemo_keys'] = env['OMEMO_KEYS']
+    elif 'omemo_keys' not in config:
+        parser.error("please specifiy a storage file for omemo keys")
+
     return (
         jid,
         password_cb,
@@ -431,11 +482,14 @@ def main():
 
     amtool_allowed = config.get('amtool_allowed')
     alertmanager_url = config.get('alertmanager_url')
+    omemo = config.get('omemo')
+    omemo_keys = config.get('omemo_keys')
 
     xmpp_app = XmppApp(
         jid, password_cb,
         amtool_allowed,
-        alertmanager_url)
+        alertmanager_url,
+        omemo, omemo_keys)
 
     # Backward compatibility
     text_template = os.environ.get('TEXT_TEMPLATE')
