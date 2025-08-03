@@ -40,11 +40,12 @@ def render_text_template(template, alert):
 
     try:
         return Template(template, autoescape=False).render(
-            **alert, parse_time=parse_timestring)
+            **alert, parse_time=parse_timestring
+        )
     except TemplateError as e:
         traceback.print_exc()
         logging.warning("Alert that failed to render: \n" + json.dumps(alert, indent=4))
-        return "Failed to render text template with jinja2: %s" % e.message
+        return "Failed to render text template with jinja2: %s" % str(e)
 
 
 def render_html_template(template, alert):
@@ -59,7 +60,7 @@ def render_html_template(template, alert):
         logging.warning("Alert that failed to render: \n" + json.dumps(alert, indent=4))
         return (
             f"Failed to render HTML template <code>{template}</code> "
-            f"with jinja2: <code>{e.message}</code>"
+            f"with jinja2: <code>{str(e)}</code>"
         )
     try:
         full = "<body>%s</body>" % output
@@ -67,7 +68,7 @@ def render_html_template(template, alert):
     except ET.ParseError as e:
         import html
 
-        return f"Failed to render HTML: {e} " f"in <code>{html.escape(full)}</code>"
+        return f"Failed to render HTML: {e} in <code>{html.escape(full)}</code>"
     return output
 
 

@@ -9,14 +9,21 @@ from prometheus_xmpp.__main__ import parse_args
 
 
 class TestParseArgs(unittest.TestCase):
-
     def test_parse_args_env(self):
-        (jid, password_cb, recipients, config) = parse_args([], env={'XMPP_ID': 'foo@bar', 'XMPP_PASS': 'baz', 'XMPP_AMTOOL_ALLOWED': 'jelmer@jelmer.uk', 'XMPP_RECIPIENTS': 'foo@bar.com'})
+        (jid, password_cb, recipients, config) = parse_args(
+            [],
+            env={
+                "XMPP_ID": "foo@bar",
+                "XMPP_PASS": "baz",
+                "XMPP_AMTOOL_ALLOWED": "jelmer@jelmer.uk",
+                "XMPP_RECIPIENTS": "foo@bar.com",
+            },
+        )
 
-        self.assertTrue(jid.startswith('foo@bar/'))
-        self.assertEqual(password_cb(), 'baz')
-        self.assertEqual(recipients, ['foo@bar.com'])
-        self.assertEqual(config['amtool_allowed'], ['jelmer@jelmer.uk'])
+        self.assertTrue(jid.startswith("foo@bar/"))
+        self.assertEqual(password_cb(), "baz")
+        self.assertEqual(recipients, ["foo@bar.com"])
+        self.assertEqual(config["amtool_allowed"], ["jelmer@jelmer.uk"])
 
     def test_parse_args_config(self):
         f = tempfile.NamedTemporaryFile(delete=False)
@@ -29,9 +36,11 @@ amtool_allowed: foo@example.com
 """)
         f.flush()
         f.close()
-        (jid, password_cb, recipients, config) = parse_args(['--config', f.name], env={})
+        (jid, password_cb, recipients, config) = parse_args(
+            ["--config", f.name], env={}
+        )
 
-        self.assertTrue(jid.startswith('foo@bar/'))
-        self.assertEqual(password_cb(), 'baz')
-        self.assertEqual(recipients, ['jelmer@jelmer.uk'])
-        self.assertEqual(config['amtool_allowed'], ['foo@example.com'])
+        self.assertTrue(jid.startswith("foo@bar/"))
+        self.assertEqual(password_cb(), "baz")
+        self.assertEqual(recipients, ["jelmer@jelmer.uk"])
+        self.assertEqual(config["amtool_allowed"], ["foo@example.com"])

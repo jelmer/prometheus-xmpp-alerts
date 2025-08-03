@@ -50,18 +50,22 @@ class CreateMessageTests(unittest.TestCase):
 
     def test_create_message_short(self):
         self.assertEqual(
-            'FIRING, 2019-04-12T23:20:50+00:00, Test Alert',
+            "FIRING, 2019-04-12T23:20:50+00:00, Test Alert",
             render_text_template(
-                DEPRECATED_TEXT_TEMPLATE_SHORT, self.message['alerts'][0]))
+                DEPRECATED_TEXT_TEMPLATE_SHORT, self.message["alerts"][0]
+            ),
+        )
 
     def test_create_message_full(self):
         self.assertEqual(
-            '*[FIRING] Test Alert*'
-                + '\nThis is just a test alert.'
-                + '\n*test:* true'
-                + '\n*severity:* test',
+            "*[FIRING] Test Alert*"
+            + "\nThis is just a test alert."
+            + "\n*test:* true"
+            + "\n*severity:* test",
             render_text_template(
-                DEPRECATED_TEXT_TEMPLATE_FULL, self.message['alerts'][0]))
+                DEPRECATED_TEXT_TEMPLATE_FULL, self.message["alerts"][0]
+            ),
+        )
 
 
 class ParseTimestringTests(unittest.TestCase):
@@ -82,7 +86,6 @@ class ParseTimestringTests(unittest.TestCase):
             datetime(2019, 4, 27, 5, 33, 35, 739602, pytz.utc),
             parse_timestring("2019-04-27T05:33:35.739602+00:00"),
         )
-
 
 
 def test_suite():
