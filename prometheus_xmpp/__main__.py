@@ -161,15 +161,15 @@ class XmppApp(slixmpp.ClientXMPP):
     def failed_auth(self, stanza):
         logging.warning("XMPP Authentication failed: %r", stanza)
 
-    def start(self, event):
+    async def start(self, event):
         """Process the session_start event.
 
         Args:
           event: Event data (empty)
         """
         logging.info("Session started.")
+        await self.get_roster()
         self.send_presence(ptype="available", pstatus="Active")
-        self.get_roster()
         online_gauge.set(1)
         last_alert_message_succeeded_gauge.set(1)
 
@@ -206,7 +206,7 @@ class XmppApp(slixmpp.ClientXMPP):
 async def serve_test(request):
     xmpp_app = request.app["xmpp_app"]
     try:
-        recipients = [request.match_info["to_jid"]]
+        recipients = [(request.match_info["to_jid"], "chat")]
     except KeyError:
         recipients = request.app["recipients"]
     if not recipients:
@@ -220,8 +220,8 @@ async def serve_test(request):
         text, html = await render_alert(
             request.app["text_template"], request.app["html_template"], EXAMPLE_ALERT
         )
-        for to_jid in recipients:
-            xmpp_app.send_message(mto=to_jid, mbody=text, mhtml=html, mtype="chat")
+        for mto, mtype in recipients:
+            xmpp_app.send_message(mto=mto, mbody=text, mhtml=html, mtype=mtype)
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
         logging.warning("Test alert not posted since we are not online: %s", e)
         return web.Response(body="Did not send message. Not online: %s" % e)
@@ -254,10 +254,7 @@ async def serve_alert(request):
     try:
         recipients = [(request.match_info["to_jid"], "chat")]
     except KeyError:
-        try:
-            recipients = [(jid, "chat") for jid in request.app["recipients"]]
-        except KeyError:
-            recipients = [(request.app["muc_jid"], "groupchat")]
+        recipients = request.app["recipients"]
 
     if request.content_type != "application/json":
         raise web.HTTPUnsupportedMediaType(
@@ -399,14 +396,18 @@ def parse_args(argv=None, env=os.environ):
             return None
 
     if "XMPP_RECIPIENTS" in env:
-        recipients = env["XMPP_RECIPIENTS"].split(",")
+        recipients = [(jid, "chat") for jid in env["XMPP_RECIPIENTS"].split(",")]
     elif "recipients" in config:
         recipients = config["recipients"]
         if not isinstance(recipients, list):
             recipients = [recipients]
     elif "to_jid" in config:
-        recipients = [config["to_jid"]]
+        recipients = [(config["to_jid"], "chat")]
     else:
+        recipients = []
+    if "muc_jid" in config:
+        recipients.append((config["muc_jid"], "groupchat"))
+    if not recipients:
         parser.error(
             "no recipients specified in configuration (`recipients` or `to_jid`) or environment (`XMPP_RECIPIENTS`)"
         )
