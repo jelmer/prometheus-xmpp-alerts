@@ -1,5 +1,5 @@
 # __init__.py -- The tests for prometheus_xmpp
-# Copyright (C) 2018 Jelmer Vernooij <jelmer@jelmer.uk>
+# Copyright (C) 2018, 2025 Jelmer Vernooij <jelmer@jelmer.uk>
 #
 
 import os
@@ -22,7 +22,7 @@ class TestParseArgs(unittest.TestCase):
 
         self.assertTrue(jid.startswith("foo@bar/"))
         self.assertEqual(password_cb(), "baz")
-        self.assertEqual(recipients, ["foo@bar.com"])
+        self.assertEqual(recipients, [("foo@bar.com", "chat")])
         self.assertEqual(config["amtool_allowed"], ["jelmer@jelmer.uk"])
 
     def test_parse_args_config(self):
@@ -42,5 +42,5 @@ amtool_allowed: foo@example.com
 
         self.assertTrue(jid.startswith("foo@bar/"))
         self.assertEqual(password_cb(), "baz")
-        self.assertEqual(recipients, ["jelmer@jelmer.uk"])
+        self.assertEqual(recipients, [("jelmer@jelmer.uk", "chat")])
         self.assertEqual(config["amtool_allowed"], ["foo@example.com"])

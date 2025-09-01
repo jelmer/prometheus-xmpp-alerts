@@ -396,7 +396,7 @@ def parse_args(argv=None, env=os.environ):
             return None
 
     if "XMPP_RECIPIENTS" in env:
-        recipients = env["XMPP_RECIPIENTS"].split(",")
+        recipients = [(jid, "chat") for jid in env["XMPP_RECIPIENTS"].split(",")]
     elif "recipients" in config:
         recipients = config["recipients"]
         if not isinstance(recipients, list):
