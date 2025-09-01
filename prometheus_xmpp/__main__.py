@@ -406,7 +406,7 @@ def parse_args(argv=None, env=os.environ):
     else:
         recipients = []
     if "muc_jid" in config:
-        recipients = [(config["muc_jid"], "groupchat")]
+        recipients.append((config["muc_jid"], "groupchat"))
     if not recipients:
         parser.error(
             "no recipients specified in configuration (`recipients` or `to_jid`) or environment (`XMPP_RECIPIENTS`)"
