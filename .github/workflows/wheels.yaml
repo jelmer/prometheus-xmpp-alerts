@@ -60,7 +60,7 @@ jobs:
           # See https://github.com/pypa/twine/issues/1216
           pip install "twine>=6.1.0" "packaging>=24.2"
       - name: Download sdist
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: artifact-source
           path: dist
@@ -82,7 +82,7 @@ jobs:
       url: https://pypi.org/p/prometheus-xmpp-alerts
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           merge-multiple: true
           pattern: artifact-*
