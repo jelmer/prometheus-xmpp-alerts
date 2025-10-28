@@ -15,11 +15,6 @@ jobs:
         - '3.12'
         - '3.11'
         - '3.10'
-        - '3.9'
-        exclude:
-          # There is no pyyaml wheel on macos-latest/3.9
-        - os: macos-latest
-          python-version: "3.9"
       fail-fast: false
 
     steps:
