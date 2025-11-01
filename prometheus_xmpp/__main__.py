@@ -278,10 +278,10 @@ async def serve_alert(request):
 
             try:
                 for mto, mtype in recipients:
-            if mtype == "groupchat":
-                xmpp_app.send_message(mto=mto, mbody=text, mtype="groupchat")
-            else:
-                xmpp_app.send_message(mto=mto, mbody=text, mhtml=html, mtype=mtype)
+                    if mtype == "groupchat":
+                        xmpp_app.send_message(mto=mto, mbody=text, mtype="groupchat")
+                    else:
+                        xmpp_app.send_message(mto=mto, mbody=text, mhtml=html, mtype=mtype)
             except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
                 logging.warning("Alert posted but we are not online: %s", e)
                 last_alert_message_succeeded_gauge.set(0)
