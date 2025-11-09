@@ -45,7 +45,7 @@ You can also set the following environment variables instead:
 * ``WEBHOOK_PORT`` - Port to listen on (optional)
 
 * ``TEXT_TEMPLATE`` - Template for text messages (see above, optional)
-* ``HTML_TEMPALTE`` - Template for HTML messages (see above, optional)
+* ``HTML_TEMPLATE`` - Template for HTML messages (see above, optional)
 
 And run the web hook::
 
