@@ -221,7 +221,10 @@ async def serve_test(request):
             request.app["text_template"], request.app["html_template"], EXAMPLE_ALERT
         )
         for mto, mtype in recipients:
-            xmpp_app.send_message(mto=mto, mbody=text, mhtml=html, mtype=mtype)
+            if mtype == "groupchat":
+                xmpp_app.send_message(mto=mto, mbody=text, mtype="groupchat")
+            else:
+                xmpp_app.send_message(mto=mto, mbody=text, mhtml=html, mtype=mtype)
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
         logging.warning("Test alert not posted since we are not online: %s", e)
         return web.Response(body="Did not send message. Not online: %s" % e)
@@ -275,7 +278,10 @@ async def serve_alert(request):
 
             try:
                 for mto, mtype in recipients:
-                    xmpp_app.send_message(mto=mto, mbody=text, mhtml=html, mtype=mtype)
+            if mtype == "groupchat":
+                xmpp_app.send_message(mto=mto, mbody=text, mtype="groupchat")
+            else:
+                xmpp_app.send_message(mto=mto, mbody=text, mhtml=html, mtype=mtype)
             except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
                 logging.warning("Alert posted but we are not online: %s", e)
                 last_alert_message_succeeded_gauge.set(0)
@@ -474,6 +480,10 @@ def main():
             muc_bot_nick = config.get("muc_bot_nick")
         if not muc_bot_nick:
             muc_bot_nick = "PrometheusAlerts"
+        recipients = [
+            (jid, "groupchat") if jid == muc_jid else (jid, mtype)
+            for (jid, mtype) in recipients
+        ]
         xmpp_app.plugin["xep_0045"].join_muc(muc_jid, muc_bot_nick)
 
     web_app = web.Application()
