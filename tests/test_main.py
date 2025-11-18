@@ -2,6 +2,7 @@
 # Copyright (C) 2018, 2025 Jelmer Vernooij <jelmer@jelmer.uk>
 #
 
+import logging
 import os
 import tempfile
 import unittest
@@ -136,8 +137,11 @@ Link: http://example.com:9090/graph?g0.expr=someexpr"""
         """Test text template rendering with invalid syntax returns error message."""
         template = "{{ invalid syntax"
         alert = {"status": "firing", "labels": {}, "annotations": {}}
-        result = render_text_template(template, alert)
+        with self.assertLogs(level=logging.WARNING) as cm:
+            result = render_text_template(template, alert)
         self.assertIn("Failed to render text template", result)
+        self.assertEqual(len(cm.output), 1)
+        self.assertIn("Alert that failed to render", cm.output[0])
 
 
 class TestRenderHtmlTemplate(unittest.TestCase):
@@ -216,8 +220,11 @@ in this multi-line description
         """Test HTML template rendering with invalid syntax returns error message."""
         template = "{{ invalid syntax"
         alert = {"status": "firing", "labels": {}, "annotations": {}}
-        result = render_html_template(template, alert)
+        with self.assertLogs(level=logging.WARNING) as cm:
+            result = render_html_template(template, alert)
         self.assertIn("Failed to render HTML template", result)
+        self.assertEqual(len(cm.output), 1)
+        self.assertIn("Alert that failed to render", cm.output[0])
 
     def test_render_html_template_invalid_html(self):
         """Test HTML template rendering with invalid HTML returns error message."""
