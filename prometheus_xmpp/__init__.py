@@ -15,7 +15,6 @@ import json
 import logging
 import re
 import subprocess
-import traceback
 from datetime import datetime
 
 __version__ = (0, 6, 0)
@@ -43,8 +42,12 @@ def render_text_template(template, alert):
             **alert, parse_time=parse_timestring
         )
     except TemplateError as e:
-        traceback.print_exc()
-        logging.warning("Alert that failed to render: \n" + json.dumps(alert, indent=4))
+        logging.warning(
+            "Alert that failed to render: \n%s\nError: %s",
+            json.dumps(alert, indent=4),
+            e,
+            exc_info=True,
+        )
         return "Failed to render text template with jinja2: %s" % str(e)
 
 
@@ -56,8 +59,12 @@ def render_html_template(template, alert):
     try:
         output = Template(template).render(**alert)
     except TemplateError as e:
-        traceback.print_exc()
-        logging.warning("Alert that failed to render: \n" + json.dumps(alert, indent=4))
+        logging.warning(
+            "Alert that failed to render: \n%s\nError: %s",
+            json.dumps(alert, indent=4),
+            e,
+            exc_info=True,
+        )
         return (
             f"Failed to render HTML template <code>{template}</code> "
             f"with jinja2: <code>{str(e)}</code>"
