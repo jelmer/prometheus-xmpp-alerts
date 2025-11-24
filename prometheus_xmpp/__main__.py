@@ -48,7 +48,7 @@ DEFAULT_HTML_TEMPLATE = """\
 <strong>\
 <span style="color:{{ color(labels.severity) }}">FIRING:</span></strong>
 {% elif status == 'resolved' %}
-<strong>span style="color:#33cc33">RESOLVED:</span></strong>
+<strong><span style="color:#33cc33">RESOLVED:</span></strong>
 {% else %}
 {{ status.upper() }}:
 {% endif %}
