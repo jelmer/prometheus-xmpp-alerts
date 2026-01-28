@@ -168,6 +168,22 @@ class TestRenderHtmlTemplate(unittest.TestCase):
         result = render_html_template(template, alert)
         self.assertEqual(result, '<a href="http://example.com/alert">Alert</a>')
 
+    def test_render_html_template_with_ampersand_in_url(self):
+        """Test HTML template rendering with URL containing ampersands (issue #191)."""
+        template = '<a href="{{ generatorURL }}">Alert</a>'
+        alert = {
+            "status": "firing",
+            "labels": {},
+            "annotations": {},
+            "generatorURL": "http://prometheus-server:9090/graph?g0.expr=someexpr&g0.tab=1",
+        }
+        result = render_html_template(template, alert)
+        # Ampersands in URLs must be escaped as &amp; for valid HTML/XML
+        self.assertEqual(
+            result,
+            '<a href="http://prometheus-server:9090/graph?g0.expr=someexpr&amp;g0.tab=1">Alert</a>',
+        )
+
     def test_render_html_template_with_severity_color(self):
         """Test HTML template rendering with severity-based coloring."""
         template = '<span style="color:{% if labels.severity == "warning" %}#ffc107{% else %}#dc3545{% endif %}">{{ labels.severity.upper() }}</span>'
@@ -181,7 +197,7 @@ class TestRenderHtmlTemplate(unittest.TestCase):
 
     def test_render_html_template_with_line_breaks(self):
         """Test HTML template with line break replacement."""
-        template = '{{ annotations.message.replace("\\n", "<br/>") }}'
+        template = '{{ annotations.message.replace("\\n", "<br/>") | safe }}'
         alert = {
             "status": "firing",
             "labels": {},

@@ -54,10 +54,12 @@ def render_text_template(template, alert):
 def render_html_template(template, alert):
     from xml.etree import ElementTree as ET
 
-    from jinja2 import Template, TemplateError
+    from jinja2 import Environment, TemplateError
 
     try:
-        output = Template(template).render(**alert)
+        # Enable autoescape to properly escape HTML special characters (e.g., & -> &amp;)
+        env = Environment(autoescape=True)
+        output = env.from_string(template).render(**alert)
     except TemplateError as e:
         logging.warning(
             "Alert that failed to render: \n%s\nError: %s",
