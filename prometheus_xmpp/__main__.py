@@ -56,7 +56,7 @@ DEFAULT_HTML_TEMPLATE = """\
 {% if labels.host or labels.instance %}\
 at {{ labels.host or labels.instance }}{% endif %}
 {% if annotations.message %}<br/>\
-{{ annotations.message.replace("\\n", "<br/>") }}{% endif %}
+{{ annotations.message.replace("\\n", "<br/>") | safe }}{% endif %}
 {% if annotations.description %}<br/>{{ annotations.description }}{% endif %}
 <br/><a href="{{ generatorURL }}">Alert link</a>
 """
