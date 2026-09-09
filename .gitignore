@@ -5,3 +5,4 @@ __pycache__
 dist
 .tox
 .mypy_cache
+build
