@@ -4,18 +4,19 @@
 
 import unittest
 from datetime import datetime
+from typing import ClassVar
 
 import pytz
 
 from prometheus_xmpp import parse_timestring, render_text_template
 from prometheus_xmpp.__main__ import (
-    DEPRECATED_TEXT_TEMPLATE_SHORT,
     DEPRECATED_TEXT_TEMPLATE_FULL,
+    DEPRECATED_TEXT_TEMPLATE_SHORT,
 )
 
 
 class CreateMessageTests(unittest.TestCase):
-    message = {
+    message: ClassVar[dict] = {
         "version": "4",
         "groupKey": "test",
         "status": "firing",

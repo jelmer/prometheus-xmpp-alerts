@@ -19,7 +19,6 @@ import socket
 import subprocess
 import sys
 import traceback
-from typing import Optional, Tuple
 
 import slixmpp
 import yaml
@@ -33,6 +32,8 @@ from prometheus_xmpp import (
     run_amtool,
     strip_html_tags,
 )
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_CONF_PATH = "/etc/prometheus/xmpp-alerts.yml"
 
@@ -159,7 +160,7 @@ class XmppApp(slixmpp.ClientXMPP):
         self.register_plugin("xep_0045")  # Multi-User Chat
 
     def failed_auth(self, stanza):
-        logging.warning("XMPP Authentication failed: %r", stanza)
+        logger.warning("XMPP Authentication failed: %r", stanza)
 
     async def start(self, event):
         """Process the session_start event.
@@ -167,7 +168,7 @@ class XmppApp(slixmpp.ClientXMPP):
         Args:
           event: Event data (empty)
         """
-        logging.info("Session started.")
+        logger.info("Session started.")
         await self.get_roster()
         self.send_presence(ptype="available", pstatus="Active")
         online_gauge.set(1)
@@ -175,7 +176,7 @@ class XmppApp(slixmpp.ClientXMPP):
 
     def lost(self, event):
         online_gauge.set(0)
-        logging.info("Connection lost, exiting.")
+        logger.info("Connection lost, exiting.")
         sys.exit(1)
 
     def message(self, msg):
@@ -199,7 +200,7 @@ class XmppApp(slixmpp.ClientXMPP):
             elif args[0].lower() == "help":
                 response = "Supported commands: help, alert, silence."
             else:
-                response = "Unknown command: %s" % args[0].lower()
+                response = f"Unknown command: {args[0].lower()}"
             msg.reply(response).send()
 
 
@@ -223,17 +224,17 @@ async def serve_test(request):
         for mto, mtype in recipients:
             xmpp_app.send_message(mto=mto, mbody=text, mhtml=html, mtype=mtype)
     except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
-        logging.warning("Test alert not posted since we are not online: %s", e)
-        return web.Response(body="Did not send message. Not online: %s" % e)
+        logger.warning("Test alert not posted since we are not online: %s", e)
+        return web.Response(body=f"Did not send message. Not online: {e}")
     else:
         return web.Response(body="Sent message.")
 
 
 async def render_alert(
-    text_template: Optional[str], html_template: Optional[str], alert
-) -> Tuple[str, Optional[str]]:
+    text_template: str | None, html_template: str | None, alert
+) -> tuple[str, str | None]:
     text: str
-    html: Optional[str]
+    html: str | None
     if html_template:
         html = render_html_template(html_template, alert)
         if not text_template:
@@ -265,7 +266,7 @@ async def serve_alert(request):
     try:
         payload = await request.json()
     except json.decoder.JSONDecodeError as e:
-        raise web.HTTPUnprocessableEntity(text=str(e))
+        raise web.HTTPUnprocessableEntity(text=str(e)) from e
     sent = 0
     for alert in payload["alerts"]:
         try:
@@ -277,9 +278,9 @@ async def serve_alert(request):
                 for mto, mtype in recipients:
                     xmpp_app.send_message(mto=mto, mbody=text, mhtml=html, mtype=mtype)
             except slixmpp.xmlstream.xmlstream.NotConnectedError as e:
-                logging.warning("Alert posted but we are not online: %s", e)
+                logger.warning("Alert posted but we are not online: %s", e)
                 last_alert_message_succeeded_gauge.set(0)
-                return web.Response(body="Did not send message. Not online: %s" % e)
+                return web.Response(body=f"Did not send message. Not online: {e}")
             else:
                 last_alert_message_succeeded_gauge.set(1)
                 sent += 1
@@ -287,9 +288,9 @@ async def serve_alert(request):
             last_alert_message_succeeded_gauge.set(0)
             traceback.print_exc()
             raise web.HTTPInternalServerError(
-                text="failed to sent some messages: %s" % e
-            )
-    return web.Response(body="Sent %d messages" % sent)
+                text=f"failed to sent some messages: {e}"
+            ) from e
+    return web.Response(body=f"Sent {sent} messages")
 
 
 async def serve_health(request):
@@ -354,9 +355,12 @@ def parse_args(argv=None, env=os.environ):
     # Setup logging.
     logging.basicConfig(level=args.loglevel, format="%(levelname)-8s %(message)s")
 
-    if not args.config_path and args.optional_config_path:
-        if os.path.isfile(args.optional_config_path):
-            args.config_path = args.optional_config_path
+    if (
+        not args.config_path
+        and args.optional_config_path
+        and os.path.isfile(args.optional_config_path)
+    ):
+        args.config_path = args.optional_config_path
 
     if args.config_path:
         with open(args.config_path) as f:
@@ -376,7 +380,7 @@ def parse_args(argv=None, env=os.environ):
         parser.error("no jid set in configuration (`jid`) or environment (`XMPP_ID`)")
 
     hostname = socket.gethostname()
-    jid = "{}/{}".format(jid, hostname)
+    jid = f"{jid}/{hostname}"
 
     if "XMPP_PASS" in env:
 
@@ -425,7 +429,7 @@ def parse_args(argv=None, env=os.environ):
         config["alertmanager_url"] = env["ALERTMANAGER_URL"]
 
     if config.get("format") not in ("full", "short", None):
-        parser.error("unsupported config format: %s" % config["format"])
+        parser.error(f"unsupported config format: {config['format']}")
 
     return (
         jid,
