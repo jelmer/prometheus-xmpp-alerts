@@ -7,14 +7,15 @@ import os
 import tempfile
 import unittest
 from unittest import IsolatedAsyncioTestCase
+
+from prometheus_xmpp import render_html_template, render_text_template, strip_html_tags
 from prometheus_xmpp.__main__ import (
-    parse_args,
-    render_alert,
     DEFAULT_HTML_TEMPLATE,
     DEFAULT_TEXT_TEMPLATE,
     EXAMPLE_ALERT,
+    parse_args,
+    render_alert,
 )
-from prometheus_xmpp import render_html_template, render_text_template, strip_html_tags
 
 
 class TestParseArgs(unittest.TestCase):
@@ -35,16 +36,14 @@ class TestParseArgs(unittest.TestCase):
         self.assertEqual(config["amtool_allowed"], ["jelmer@jelmer.uk"])
 
     def test_parse_args_config(self):
-        f = tempfile.NamedTemporaryFile(delete=False)
-        self.addCleanup(os.remove, f.name)
-        f.write(b"""\
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            self.addCleanup(os.remove, f.name)
+            f.write(b"""\
 jid: foo@bar
 password: baz
 to_jid: jelmer@jelmer.uk
 amtool_allowed: foo@example.com
 """)
-        f.flush()
-        f.close()
         (jid, password_cb, recipients, config) = parse_args(
             ["--config", f.name], env={}
         )

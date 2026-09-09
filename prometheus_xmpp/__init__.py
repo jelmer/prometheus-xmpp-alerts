@@ -1,21 +1,10 @@
-#!/usr/bin/python3
-# Simple HTTP web server that forwards prometheus alerts over XMPP.
-#
-# To use, configure a web hook in alertmanager. E.g.:
-#
-# receivers:
-# - name: 'jelmer-pager'
-#   webhook_configs:
-#   - url: 'http://192.168.2.1:9199/alert'
-#
-# Edit xmpp-alerts.yml.example, then run:
-# $ python3 prometheus-xmpp-alerts --config=xmpp-alerts.yml.example
-
 import json
 import logging
 import re
 import subprocess
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 __version__ = (0, 6, 0)
 version_string = ".".join(map(str, __version__))
@@ -42,13 +31,13 @@ def render_text_template(template, alert):
             **alert, parse_time=parse_timestring
         )
     except TemplateError as e:
-        logging.warning(
+        logger.warning(
             "Alert that failed to render: \n%s\nError: %s",
             json.dumps(alert, indent=4),
             e,
             exc_info=True,
         )
-        return "Failed to render text template with jinja2: %s" % str(e)
+        return f"Failed to render text template with jinja2: {e}"
 
 
 def render_html_template(template, alert):
@@ -61,7 +50,7 @@ def render_html_template(template, alert):
         env = Environment(autoescape=True)
         output = env.from_string(template).render(**alert)
     except TemplateError as e:
-        logging.warning(
+        logger.warning(
             "Alert that failed to render: \n%s\nError: %s",
             json.dumps(alert, indent=4),
             e,
@@ -69,10 +58,10 @@ def render_html_template(template, alert):
         )
         return (
             f"Failed to render HTML template <code>{template}</code> "
-            f"with jinja2: <code>{str(e)}</code>"
+            f"with jinja2: <code>{e!s}</code>"
         )
     try:
-        full = "<body>%s</body>" % output
+        full = f"<body>{output}</body>"
         ET.fromstring(full)
     except ET.ParseError as e:
         import html
@@ -91,5 +80,6 @@ def run_amtool(args):
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        check=False,
     )
     return ret.stdout
