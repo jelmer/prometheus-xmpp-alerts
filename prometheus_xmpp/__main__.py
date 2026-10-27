@@ -36,6 +36,7 @@ from prometheus_xmpp import (
 logger = logging.getLogger(__name__)
 
 DEFAULT_CONF_PATH = "/etc/prometheus/xmpp-alerts.yml"
+DEFAULT_XMPP_PORT = 5222
 
 
 DEFAULT_HTML_TEMPLATE = """\
@@ -379,6 +380,27 @@ def parse_args(argv=None, env=os.environ):
     else:
         parser.error("no jid set in configuration (`jid`) or environment (`XMPP_ID`)")
 
+    if "XMPP_HOST" in env:
+        config["xmpp_host"] = env["XMPP_HOST"]
+    if "XMPP_PORT" in env:
+        config["xmpp_port"] = env["XMPP_PORT"]
+    if "xmpp_port" in config:
+        port = config["xmpp_port"]
+        # Environment variables are always strings; YAML may give us an int.
+        if isinstance(port, str):
+            try:
+                port = int(port)
+            except ValueError:
+                parser.error(f"invalid XMPP port: {port!r}")
+        if not isinstance(port, int) or not 0 < port < 65536:
+            parser.error(f"invalid XMPP port: {port!r}")
+        config["xmpp_port"] = port
+    # slixmpp only skips SRV lookup when both host and port are given.
+    if "xmpp_host" in config and "xmpp_port" not in config:
+        config["xmpp_port"] = DEFAULT_XMPP_PORT
+    if "xmpp_port" in config and "xmpp_host" not in config:
+        config["xmpp_host"] = slixmpp.JID(jid).domain
+
     hostname = socket.gethostname()
     jid = f"{jid}/{hostname}"
 
@@ -516,7 +538,7 @@ def main():
     else:
         listen_port = 8080
 
-    xmpp_app.connect()
+    xmpp_app.connect(host=config.get("xmpp_host"), port=config.get("xmpp_port"))
     web.run_app(web_app, host=listen_address, port=listen_port, loop=xmpp_app.loop)
 
 
