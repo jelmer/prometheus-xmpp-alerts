@@ -23,6 +23,10 @@ password: 'PASSWORD'
 # Alternatively, set a 'password_command' that should write a password to
 # stdout
 # password_command: 'pass show xmpp-alertmanager'
+# Connect to a specific XMPP server rather than looking it up via DNS SRV
+# (optional, xmpp_port defaults to 5222)
+# xmpp_host: 'xmpp.example.com'
+# xmpp_port: 5222
 to_jid: 'jelmer@example.com'
 listen_address: '192.168.2.1'
 listen_port: 9199
@@ -38,6 +42,8 @@ You can also set the following environment variables instead:
 * ``XMPP_ID`` - XMPP JID
 * ``XMPP_PASS`` - Password
 * ``XMPP_RECIPIENTS`` - comma-separated list of recipients
+* ``XMPP_HOST`` - XMPP server to connect to, bypassing DNS SRV lookup (optional)
+* ``XMPP_PORT`` - XMPP server port, defaults to 5222 (optional)
 
 * ``XMPP_AMTOOL_ALLOWED`` - comma-separated list of users (optional)
 

@@ -52,6 +52,51 @@ amtool_allowed: foo@example.com
         self.assertEqual(password_cb(), "baz")
         self.assertEqual(recipients, [("jelmer@jelmer.uk", "chat")])
         self.assertEqual(config["amtool_allowed"], ["foo@example.com"])
+        self.assertNotIn("xmpp_host", config)
+        self.assertNotIn("xmpp_port", config)
+
+    def _parse_config(self, contents, env=None):
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            self.addCleanup(os.remove, f.name)
+            f.write(b"jid: foo@bar\nto_jid: jelmer@jelmer.uk\n" + contents)
+        return parse_args(["--config", f.name], env=env or {})[3]
+
+    def test_parse_args_xmpp_host_and_port(self):
+        config = self._parse_config(b"xmpp_host: xmpp.example.com\nxmpp_port: 443\n")
+        self.assertEqual(config["xmpp_host"], "xmpp.example.com")
+        self.assertEqual(config["xmpp_port"], 443)
+
+    def test_parse_args_xmpp_host_default_port(self):
+        config = self._parse_config(b"xmpp_host: xmpp.example.com\n")
+        self.assertEqual(config["xmpp_host"], "xmpp.example.com")
+        self.assertEqual(config["xmpp_port"], 5222)
+
+    def test_parse_args_xmpp_port_default_host(self):
+        config = self._parse_config(b"xmpp_port: 443\n")
+        self.assertEqual(config["xmpp_host"], "bar")
+        self.assertEqual(config["xmpp_port"], 443)
+
+    def test_parse_args_xmpp_host_port_env(self):
+        config = self._parse_config(
+            b"xmpp_host: xmpp.example.com\nxmpp_port: 443\n",
+            env={"XMPP_HOST": "other.example.com", "XMPP_PORT": "5223"},
+        )
+        self.assertEqual(config["xmpp_host"], "other.example.com")
+        self.assertEqual(config["xmpp_port"], 5223)
+
+    def test_parse_args_xmpp_port_invalid(self):
+        with self.assertRaises(SystemExit):
+            self._parse_config(b"xmpp_port: foo\n")
+
+    def test_parse_args_xmpp_port_empty(self):
+        with self.assertRaises(SystemExit):
+            self._parse_config(b"xmpp_port:\n")
+
+    def test_parse_args_xmpp_port_out_of_range(self):
+        with self.assertRaises(SystemExit):
+            self._parse_config(b"", env={"XMPP_PORT": "0"})
+        with self.assertRaises(SystemExit):
+            self._parse_config(b"xmpp_port: 65536\n")
 
 
 class TestRenderTextTemplate(unittest.TestCase):
