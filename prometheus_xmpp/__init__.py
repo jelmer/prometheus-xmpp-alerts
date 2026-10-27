@@ -6,7 +6,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-__version__ = (0, 6, 0)
+__version__ = (0, 7, 0)
 version_string = ".".join(map(str, __version__))
 
 
